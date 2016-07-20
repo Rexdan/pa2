@@ -1,18 +1,29 @@
-
 import	java.util.*;
 import	java.io.*;
 import	java.net.*;
 
-public class Receiver {
-	
-	private void ACK()
-	{
-		
-	}
+public class Receiver implements Runnable
+{
 	
 	private void NACK()
 	{
 		
+	}
+	
+	private void writeFile(Packet packet)
+	{
+		FileOutputStream stream = null;
+		try 
+		{
+		    stream.write(packet.getBytes());
+		}catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		finally 
+		{
+		    //stream.close();
+		}
 	}
 
 	public static void main(String[] args) throws Exception 
@@ -27,5 +38,10 @@ public class Receiver {
 			socket.receive( receivePacket );
 			System.out.print( new String( receivePacket.getData() ) );
 		}
+	}
+
+	@Override
+	public void run()
+	{
 	}
 }

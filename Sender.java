@@ -1,12 +1,14 @@
 import	java.io.*;
 import	java.net.*;
+import java.util.HashMap;
 
-/*
- * ASK RUSSELL: What EXACTLY are we sending? Just strings? Generics? What?
- * 
- */
-
-public class Sender {
+public class Sender implements Runnable{
+	
+	HashMap<Integer, Packet> packets = new HashMap<>();
+	
+	int size;
+	
+	static File file;
 	
 	private void ping()
 	{
@@ -57,25 +59,33 @@ public class Sender {
 
 	public static void main(String[] args) throws Exception
 	{
-		InetAddress		destination = InetAddress.getByName( "127.0.0.1" );
+		InetAddress		destination = InetAddress.getByName( "255.255.255.255" );
 		DatagramPacket		sendPacket;
 		DatagramSocket		socket = new DatagramSocket();
 		BufferedReader		stdIn = new BufferedReader( new InputStreamReader( System.in ) );
 		int			port = 3000;
-		String s;
+		String s = stdIn.readLine();
 
 		System.out.println( "datagram target is " + destination + " port " + port );
-		System.out.print( "Enter a string>>" );
+		System.out.print( "Enter file name: " );
+		Packet fileName = new Packet(s.getBytes());
 		socket.setBroadcast( true );
-		while ( (s = stdIn.readLine()) != null )
+		
+		while ( s != null )
 		{
+			file = new File(s);
 			sendPacket = new DatagramPacket( s.getBytes(), s.getBytes().length, destination, port );
 			socket.send( sendPacket );
 			
-			System.out.println("AFTER CONVERTING TO INT: " + get_int(s.getBytes()));
-			System.out.println("AFTER CONVERTING TO STRING: " + get_istring(get_int(s.getBytes())));
-			System.out.print( "Enter a string>>" );
+			//System.out.println("AFTER CONVERTING TO INT: " + get_int(s.getBytes()));
+			//System.out.println("AFTER CONVERTING TO STRING: " + get_istring(get_int(s.getBytes())));
+			System.out.print( "Enter file name: " );
 		}
 		System.out.println( "Normal end of sender2." );
+	}
+
+	@Override
+	public void run()
+	{
 	}
 }
