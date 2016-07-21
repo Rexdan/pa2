@@ -10,12 +10,12 @@ public class Receiver implements Runnable
 		
 	}
 	
-	private void writeFile(Packet packet)
+	private void writeFile( )
 	{
 		FileOutputStream stream = null;
 		try 
 		{
-		    stream.write(packet.getBytes());
+		   // stream.write(packet.getBytes());
 		}catch(Exception e)
 		{
 			e.printStackTrace();
@@ -36,12 +36,15 @@ public class Receiver implements Runnable
 		for( ;; )
 		{
 			socket.receive( receivePacket );
-			System.out.print( new String( receivePacket.getData() ) );
+			System.out.println( new String( receivePacket.getData() ) );
 		}
 	}
 
 	@Override
 	public void run()
 	{
+		/*
+		 * 
+		 */
 	}
 }
