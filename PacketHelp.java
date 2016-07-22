@@ -10,7 +10,7 @@ public class PacketHelp
 	 */
 	//We may include a checksum byte and a byte for flagging the end of file.
 	
-	public static byte [] makePacket(int seq, String sender, String receiver, byte [] payLoad)
+	public static byte [] makePacket(int seq, String senderIP, String receiverIP, byte [] payLoad)
 	{	
 		int length = payLoad.length +16;
 		
@@ -71,7 +71,7 @@ public class PacketHelp
 		
 		
 		for(int i=16; i<length; i++){
-			bytes[i] = payLoad[i-16]
+			bytes[i] = payLoad[i-16];
 		}
 		//copies the payload bytes into the packet
 		
