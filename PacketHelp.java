@@ -1,18 +1,20 @@
 public class PacketHelp
 {
-	public PacketHelp()
-	{
-		
-	}
+	/*
+	 * Designed packet structure:
+	 * First 4 bytes are the sequence number. (Index 0-3 inclusive)
+	 * Next 4 Bytes are the sender address. (Index 4-7 inclusive)
+	 * Next 4 Bytes are the receiver address. (Index 8-11 inclusive)
+	 * Next 4 Byes are the total packets length (Index 12-15 inclusive)
+	 * Remaining packet size is the payload. (16-)
+	 */
+	//We may include a checksum byte and a byte for flagging the end of file.
 	
-	public PacketHelp(byte [] bytes)
-	{
+	public static byte [] makePacket(int seq, String sender, String receiver, byte [] payLoad)
+	{	
+		int length = payLoad.length +16;
 		
-	}
-	
-	public static byte [] makePacket(int seq/*, String sender, String receiver, byte [] payLoad*/)
-	{
-		byte [] bytes = new byte[4 /*16 + payLoad.length*/];
+		byte [] bytes = new byte[length];
 		Integer sequence = seq;
 		int a,b,c,d;
 		d = sequence & 0x000000ff;
@@ -23,6 +25,56 @@ public class PacketHelp
 		bytes[1] = (byte) b;
 		bytes[2] = (byte) c;
 		bytes[3] = (byte) d;
+		//encodes sequence number
+		
+		String byte0;
+		String byte1;
+		String byte2;
+		String byte3;
+		int breakpoint1 = senderIP.indexOf(".");
+		int breakpoint2 = senderIP.indexOf(".", breakpoint1+1);
+		int breakpoint3 = senderIP.indexOf(".", breakpoint2+1);
+		byte0 = senderIP.substring(0, breakpoint1);
+		byte1 = senderIP.substring(breakpoint1+1, breakpoint2);
+		byte2 = senderIP.substring(breakpoint2+1, breakpoint3);
+		byte3 = senderIP.substring(breakpoint3+1);
+		bytes[4] = Byte.parseByte(byte0);
+		bytes[5] = Byte.parseByte(byte1);
+		bytes[6] = Byte.parseByte(byte2);
+		bytes[7] = Byte.parseByte(byte3);
+		//encodes sender ip address
+		
+		
+		breakpoint1 = receiverIP.indexOf(".");
+		breakpoint2 = receiverIP.indexOf(".", breakpoint1+1);
+		breakpoint3 = receiverIP.indexOf(".", breakpoint2+1);
+		byte0 = receiverIP.substring(0, breakpoint1);
+		byte1 = receiverIP.substring(breakpoint1+1, breakpoint2);
+		byte2 = receiverIP.substring(breakpoint2+1, breakpoint3);
+		byte3 = receiverIP.substring(breakpoint3+1);
+		bytes[8] = Byte.parseByte(byte0);
+		bytes[9] = Byte.parseByte(byte1);
+		bytes[10] = Byte.parseByte(byte2);
+		bytes[11] = Byte.parseByte(byte3);
+		//encodes receiver ip address
+		
+		
+		d = length & 0x000000ff;
+		c = (length >> 8) & 0x000000ff;
+		b = (length >> 16) & 0x000000ff;
+		a = (length >> 24) & 0x000000ff;
+		bytes[12] = (byte) a;
+		bytes[13] = (byte) b;
+		bytes[14] = (byte) c;
+		bytes[15] = (byte) d;
+		//encodes the total packet length
+		
+		
+		for(int i=16; i<length; i++){
+			bytes[i] = payLoad[i-16]
+		}
+		//copies the payload bytes into the packet
+		
 		return bytes;
 	}
 	
