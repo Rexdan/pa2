@@ -5,7 +5,7 @@ import	java.net.*;
 public class Receiver implements Runnable
 {
 	
-	private void NACK()
+	private void NACK() /*OPTION 2 For Protocol*/
 	{
 		
 	}
@@ -31,12 +31,15 @@ public class Receiver implements Runnable
 		DatagramSocket	socket = new DatagramSocket( 3000 );
 		byte []		payload = new byte[512];
 		DatagramPacket	receivePacket = new DatagramPacket( payload, payload.length );
-
+		String fileName;
+		File file;
+		
 		socket.setReuseAddress( true );
 		for( ;; )
 		{
 			socket.receive( receivePacket );
-			System.out.println( new String( receivePacket.getData() ) );
+			fileName = new String( receivePacket.getData() );
+			System.out.println( fileName/*new String( receivePacket.getData() )*/ );
 		}
 	}
 

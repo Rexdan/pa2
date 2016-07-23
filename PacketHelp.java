@@ -6,13 +6,15 @@ public class PacketHelp
 	 * Next 4 Bytes are the sender address. (Index 4-7 inclusive)
 	 * Next 4 Bytes are the receiver address. (Index 8-11 inclusive)
 	 * Next 4 Byes are the total packets length (Index 12-15 inclusive)
+	 * Next 1 Byte is the checksum (Index 16 inclusive)
+	 * Next 1 Byte is the Flag(Index 17 inclusive)
 	 * Remaining packet size is the payload. (16-)
 	 */
 	//We may include a checksum byte and a byte for flagging the end of file.
 	
-	public static byte [] makePacket(int seq, String senderIP, String receiverIP, byte [] payLoad)
+	public static byte [] makePacket(int seq, String senderIP, String receiverIP, byte checksum, byte flag, byte [] payLoad)
 	{	
-		int length = payLoad.length +16;
+		int length = payLoad.length +18;
 		
 		byte [] bytes = new byte[length];
 		Integer sequence = seq;
@@ -25,7 +27,7 @@ public class PacketHelp
 		bytes[1] = (byte) b;
 		bytes[2] = (byte) c;
 		bytes[3] = (byte) d;
-		//encodes sequence number
+		/*encodes sequence number*/
 		
 		String byte0;
 		String byte1;
@@ -67,8 +69,13 @@ public class PacketHelp
 		bytes[13] = (byte) b;
 		bytes[14] = (byte) c;
 		bytes[15] = (byte) d;
-		//encodes the total packet length
+		//encodes the length into the packet
 		
+		bytes[16] = checksum;
+		//copies the checksum into the packet
+		
+		bytes[17] = flag;
+		//copies the flag into the packet
 		
 		for(int i=16; i<length; i++){
 			bytes[i] = payLoad[i-16];
@@ -78,7 +85,7 @@ public class PacketHelp
 		return bytes;
 	}
 	
-	static int get_int( byte[] b4 )
+	public static int bytesToInt( byte[] b4 )
 	{
 		int result = 0;
 		Byte bt;
@@ -107,7 +114,7 @@ public class PacketHelp
 		return result;
 	}
 	
-	static String get_istring( int x )
+	public static String intToIP( int x )
 	{
 		int			a,b,c,d;
 		d = x & 0x000000ff;
@@ -118,55 +125,55 @@ public class PacketHelp
 		return new String( a + "." + b + "." + c + "." + d );
 	}
 	
-	public int getLength(byte [] bytes)
+	public static int getLength(byte [] bytes)
 	{
 		byte length[] = new byte[4];
 		length[0] = bytes[12];
 		length[1] = bytes[13];
 		length[2] = bytes[14];
 		length[3] = bytes[15];
-		return get_int(length);
+		return bytesToInt(length);
 	}
 	
-	public int getSequenceNumber(byte [] bytes)
+	public static int getSequenceNumber(byte [] bytes)
 	{
 		byte [] sequenceNum = new byte[4];
 		sequenceNum[0] = bytes[0];
 		sequenceNum[1] = bytes[1];
 		sequenceNum[2] = bytes[2];
 		sequenceNum[3] = bytes[3];
-		return get_int(sequenceNum);
+		return bytesToInt(sequenceNum);
 	}
 	
-	public String getSenderIP(byte [] bytes)
+	public static String getSenderIP(byte [] bytes)
 	{
 		byte [] senderIP = new byte[4];
 		senderIP[0] = bytes[4];
 		senderIP[1] = bytes[5];
 		senderIP[2] = bytes[6];
 		senderIP[3] = bytes[7];
-		int temp = get_int(senderIP);
-		return get_istring(temp);
+		int temp = bytesToInt(senderIP);
+		return intToIP(temp);
 	}
 	
-	public String getReceiverIP(byte [] bytes)
+	public static String getReceiverIP(byte [] bytes)
 	{
 		byte [] receiverIP = new byte[4];
 		receiverIP[0] = bytes[8];
 		receiverIP[1] = bytes[9];
 		receiverIP[2] = bytes[10];
 		receiverIP[3] = bytes[11];
-		int temp = get_int(receiverIP);
-		return get_istring(temp);
+		int temp = bytesToInt(receiverIP);
+		return intToIP(temp);
 	}
 	
-	public byte [] getPayLoad(byte [] bytes, int length) /*Length Refers to FULL Packet Length*/
+	public static byte [] getPayLoad(byte [] bytes, int length) /*Length Refers to FULL Packet Length*/
 	{
-		byte [] payLoad = new byte[length-16];
+		byte [] payLoad = new byte[length-18];
 		
 		for(int i = 0; i < payLoad.length; i++)
 		{
-			payLoad[i] = bytes[i+16];
+			payLoad[i] = bytes[i+18];
 		}
 		return payLoad;
 	}
