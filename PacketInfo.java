@@ -1,6 +1,8 @@
 import java.net.DatagramPacket;
 import java.util.ArrayList;
-
+/*
+ * This is to store information on a SINGLE packet.
+ */
 public class PacketInfo 
 {
 	/*
@@ -33,7 +35,6 @@ public class PacketInfo
 	
 	public PacketInfo(byte [] input)
 	{
-		this.next = null;
 		pendingReceivers = new ArrayList<DatagramPacket>();
 		seq = PacketHelp.getSequenceNumber(input);
 		toSend = input;

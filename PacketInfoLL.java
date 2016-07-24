@@ -1,6 +1,7 @@
 public class PacketInfoLL 
 {
 	PacketInfo head;
+	public int size = 0;
 	
 	public PacketInfoLL() 
 	{
@@ -11,14 +12,15 @@ public class PacketInfoLL
 	{
 		if(head == null)
 		{
-			this.head = input;
+			head = input;
 		}
 		else
 		{ 
-			PacketInfo temp = head.next;
-			head.next = input;
-			input.next = temp;
+			PacketInfo temp = input;
+			temp.next = head;
+			head = temp;
 		}
+		size++;
 	}
 	
 	public boolean removePacketInfo(int input)
@@ -36,9 +38,11 @@ public class PacketInfoLL
 				if (tempy == head)
 				{
 					head = head.next;
+					size--;
 					return true;
 				}
 				prev.next = tempy.next;
+				size--;
 				return true;
 			}
 			else
@@ -50,7 +54,7 @@ public class PacketInfoLL
 		return false;
 	}
 	
-	public PacketInfo traverse(int input)
+	public PacketInfo search(int input)
 	{
 		for (PacketInfo tempy = head; tempy != null; tempy = tempy.next)
 		{
