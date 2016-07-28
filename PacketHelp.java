@@ -1,20 +1,22 @@
+import com.sun.org.apache.bcel.internal.util.ByteSequence;
+
 public class PacketHelp
 {
 	/*
 	 * Designed packet structure:
 	 * First 4 bytes are the sequence number. (Index 0-3 inclusive)
 	 * Next 4 Bytes are the sender address. (Index 4-7 inclusive)
-	 * Next 4 Bytes are the receiver address. (Index 8-11 inclusive)
-	 * Next 4 Byes are the total packets length (Index 12-15 inclusive)
-	 * Next 1 Byte is the checksum (Index 16 inclusive)
-	 * Next 1 Byte is the Flag(Index 17 inclusive)
-	 * Remaining packet size is the payload. (16-)
+	 * Next 1 Byte. (Index 8 inclusive)
+	 * Next 4 Byes are the total payload length with header (Index 9-12 inclusive)
+	 * Next 1 Byte is the checksum (Index 13 inclusive)
+	 * Next 1 Byte is the Flag(Index 14 inclusive)
+	 * Remaining packet size is the headerless payoad. (15-)
 	 */
 	//We may include a checksum byte and a byte for flagging the end of file.
 	
-	public static byte [] makePacket(int seq, String senderIP, String receiverIP, byte checksum, byte flag, byte [] payLoad)
+	public static byte [] makePacket(int seq, String ip, char color, byte checksum, byte flag, byte [] payLoad)
 	{	
-		int length = payLoad.length +18;
+		int length = payLoad.length +15;
 		
 		byte [] bytes = new byte[length];
 		Integer sequence = seq;
@@ -33,54 +35,45 @@ public class PacketHelp
 		String byte1;
 		String byte2;
 		String byte3;
-		int breakpoint1 = senderIP.indexOf(".");
-		int breakpoint2 = senderIP.indexOf(".", breakpoint1+1);
-		int breakpoint3 = senderIP.indexOf(".", breakpoint2+1);
-		byte0 = senderIP.substring(0, breakpoint1);
-		byte1 = senderIP.substring(breakpoint1+1, breakpoint2);
-		byte2 = senderIP.substring(breakpoint2+1, breakpoint3);
-		byte3 = senderIP.substring(breakpoint3+1);
+		int breakpoint1 = ip.indexOf(".");
+		int breakpoint2 = ip.indexOf(".", breakpoint1+1);
+		int breakpoint3 = ip.indexOf(".", breakpoint2+1);
+		byte0 = ip.substring(0, breakpoint1);
+		byte1 = ip.substring(breakpoint1+1, breakpoint2);
+		byte2 = ip.substring(breakpoint2+1, breakpoint3);
+		byte3 = ip.substring(breakpoint3+1);
 		bytes[4] = Byte.parseByte(byte0);
 		bytes[5] = Byte.parseByte(byte1);
 		bytes[6] = Byte.parseByte(byte2);
 		bytes[7] = Byte.parseByte(byte3);
-		//encodes sender ip address
+		//encodes ip address (can be sender or receiver depending on context)
 		
 		
-		breakpoint1 = receiverIP.indexOf(".");
-		breakpoint2 = receiverIP.indexOf(".", breakpoint1+1);
-		breakpoint3 = receiverIP.indexOf(".", breakpoint2+1);
-		byte0 = receiverIP.substring(0, breakpoint1);
-		byte1 = receiverIP.substring(breakpoint1+1, breakpoint2);
-		byte2 = receiverIP.substring(breakpoint2+1, breakpoint3);
-		byte3 = receiverIP.substring(breakpoint3+1);
-		bytes[8] = Byte.parseByte(byte0);
-		bytes[9] = Byte.parseByte(byte1);
-		bytes[10] = Byte.parseByte(byte2);
-		bytes[11] = Byte.parseByte(byte3);
-		//encodes receiver ip address
+		bytes[8] = Byte.parseByte(Character.getNumericValue(color)+"");
+		//'r' for red; 'b' for blue
+		//encodes color char
 		
 		
 		d = length & 0x000000ff;
 		c = (length >> 8) & 0x000000ff;
 		b = (length >> 16) & 0x000000ff;
 		a = (length >> 24) & 0x000000ff;
-		bytes[12] = (byte) a;
-		bytes[13] = (byte) b;
-		bytes[14] = (byte) c;
-		bytes[15] = (byte) d;
+		bytes[9] = (byte) a;
+		bytes[10] = (byte) b;
+		bytes[11] = (byte) c;
+		bytes[12] = (byte) d;
 		//encodes the length into the packet
 		
-		bytes[16] = checksum;
+		bytes[13] = checksum;
 		//copies the checksum into the packet
 		
-		bytes[17] = flag;
+		bytes[14] = flag;
 		//copies the flag into the packet
 		
-		for(int i=16; i<length; i++){
-			bytes[i] = payLoad[i-16];
+		for(int i=15; i<length; i++){
+			bytes[i] = payLoad[i-15];
 		}
-		//copies the payload bytes into the packet
+		//bundles the payload with the header
 		
 		return bytes;
 	}
@@ -145,35 +138,32 @@ public class PacketHelp
 		return bytesToInt(sequenceNum);
 	}
 	
-	public static String getSenderIP(byte [] bytes)
+	public static String getIP(byte [] bytes)
 	{
-		byte [] senderIP = new byte[4];
-		senderIP[0] = bytes[4];
-		senderIP[1] = bytes[5];
-		senderIP[2] = bytes[6];
-		senderIP[3] = bytes[7];
-		int temp = bytesToInt(senderIP);
+		byte [] ip = new byte[4];
+		ip[0] = bytes[4];
+		ip[1] = bytes[5];
+		ip[2] = bytes[6];
+		ip[3] = bytes[7];
+		int temp = bytesToInt(ip);
 		return intToIP(temp);
 	}
 	
-	public static String getReceiverIP(byte [] bytes)
+	public static char getColor(byte [] bytes)
 	{
-		byte [] receiverIP = new byte[4];
-		receiverIP[0] = bytes[8];
-		receiverIP[1] = bytes[9];
-		receiverIP[2] = bytes[10];
-		receiverIP[3] = bytes[11];
-		int temp = bytesToInt(receiverIP);
-		return intToIP(temp);
+		byte [] byteChar = new byte[1];
+		byteChar[0] = bytes[8];
+		String s = new String(byteChar); // possibly with a charset
+		return s.charAt(0);
 	}
 	
-	public static byte [] getPayLoad(byte [] bytes, int length) /*Length Refers to FULL Packet Length*/
+	public static byte [] getPayLoad(byte [] bytes, int length) /*Length Refers to FULL Payload Length*/
 	{
-		byte [] payLoad = new byte[length-18];
+		byte [] payLoad = new byte[length-15];
 		
 		for(int i = 0; i < payLoad.length; i++)
 		{
-			payLoad[i] = bytes[i+18];
+			payLoad[i] = bytes[i+15];
 		}
 		return payLoad;
 	}
