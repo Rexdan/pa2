@@ -42,10 +42,14 @@ public class PacketHelp
 		byte1 = ip.substring(breakpoint1+1, breakpoint2);
 		byte2 = ip.substring(breakpoint2+1, breakpoint3);
 		byte3 = ip.substring(breakpoint3+1);
-		bytes[4] = Byte.parseByte(byte0);
-		bytes[5] = Byte.parseByte(byte1);
-		bytes[6] = Byte.parseByte(byte2);
-		bytes[7] = Byte.parseByte(byte3);
+		a = (int) Integer.parseInt(byte0);
+		b = (int) Integer.parseInt(byte1);
+		c = (int) Integer.parseInt(byte2);
+		d = (int) Integer.parseInt(byte3);
+		bytes[4] = (byte) (a & 0xFF);
+		bytes[5] = (byte) (b & 0xFF);
+		bytes[6] = (byte) (c & 0xFF);
+		bytes[7] = (byte) (d & 0xFF);
 		//encodes ip address (can be sender or receiver depending on context)
 		
 		
@@ -107,7 +111,7 @@ public class PacketHelp
 		return result;
 	}
 	
-	public static String intToIP( int x )
+	/*public static String intToIP( int x )
 	{
 		int			a,b,c,d;
 		d = x & 0x000000ff;
@@ -116,7 +120,7 @@ public class PacketHelp
 		a = (x >> 24) & 0x000000ff;
 		//System.out.println( "a is " + a );
 		return new String( a + "." + b + "." + c + "." + d );
-	}
+	}*/
 	
 	public static int getLength(byte [] bytes)
 	{
@@ -145,8 +149,12 @@ public class PacketHelp
 		ip[1] = bytes[5];
 		ip[2] = bytes[6];
 		ip[3] = bytes[7];
-		int temp = bytesToInt(ip);
-		return intToIP(temp);
+		int a = (int) ip[0] & 0xFF;
+		int b = (int) ip[1] & 0xFF;
+		int c = (int) ip[2] & 0xFF;
+		int d = (int) ip[3] & 0xFF;
+		String temp = a + "." + b + "." + c + "." + d;
+		return temp;
 	}
 	
 	public static char getColor(byte [] bytes)
