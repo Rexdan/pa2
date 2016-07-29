@@ -29,17 +29,29 @@ public class Receiver implements Runnable
 	public static void main(String[] args) throws Exception 
 	{
 		DatagramSocket	socket = new DatagramSocket( 3000 );
-		byte []		payload = new byte[512];
+		byte []		payload = new byte[2048 + 15];
 		DatagramPacket	receivePacket = new DatagramPacket( payload, payload.length );
 		String fileName;
 		File file;
-		
+		int stillNeed = 0;
+		PacketInfo[] window = new PacketInfo[10];
+		RandomAccessFile raf;
 		socket.setReuseAddress( true );
-		for( ;; )
+		while( true ) //what would be a good terminating condition for this?
 		{
 			socket.receive( receivePacket );
-			fileName = new String( receivePacket.getData() );
-			System.out.println( fileName/*new String( receivePacket.getData() )*/ );
+			byte [] data = receivePacket.getData();
+			int seq = PacketHelp.getSequenceNumber(data);
+			if(seq==0 && stillNeed==0){
+				byte[] temp = PacketHelp.getPayLoad(data, data.length);
+				fileName = new String(temp);
+				file = new File(System.getProperty("user.dir")+ "\\"+ fileName);
+				raf = new RandomAccessFile(file, "rw");
+			}
+			//case where packet is filename
+			//creates extrapolates filename from bytes, creates a file in current directory with indicated filename
+			//~~~~incomplete~~~~~~~~
+			//System.out.println( fileName/*new String( receivePacket.getData() )*/ );
 		}
 	}
 

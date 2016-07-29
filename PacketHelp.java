@@ -1,5 +1,3 @@
-import com.sun.org.apache.bcel.internal.util.ByteSequence;
-
 public class PacketHelp
 {
 	/*
@@ -53,7 +51,7 @@ public class PacketHelp
 		//encodes ip address (can be sender or receiver depending on context)
 		
 		
-		bytes[8] = Byte.parseByte(Character.getNumericValue(color)+"");
+		bytes[8] = (byte) (color & 0xFF);
 		//'r' for red; 'b' for blue
 		//encodes color char
 		
@@ -161,8 +159,8 @@ public class PacketHelp
 	{
 		byte [] byteChar = new byte[1];
 		byteChar[0] = bytes[8];
-		String s = new String(byteChar); // possibly with a charset
-		return s.charAt(0);
+		char c = (char) (byteChar[0] & 0xFF);
+		return c;
 	}
 	
 	public static byte [] getPayLoad(byte [] bytes, int length) /*Length Refers to FULL Payload Length*/

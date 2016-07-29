@@ -4,15 +4,21 @@ import java.nio.file.*;
 import java.util.Arrays;
 import java.util.HashMap;
 
-public class Sender implements Runnable{
+public class Sender{
 	
 	//HashMap<Integer, Packet> packets = new HashMap<>();
+	
+	
+	//needs nack and timeout thread implementation to work!!!
+	//do we have to deal with multiple dynamically changing receivers?
 	
 	int size;
 	
 	static File file;
 	
 	final private static int MAX = 100;
+	
+	public static PacketInfo [] hashArray;
 	
 	private void ping()
 	{
@@ -35,12 +41,14 @@ public class Sender implements Runnable{
 		FileOutputStream fos;
 		InputStream stream;
 		byte [] fileBytes;
+		hashArray = new PacketInfo[10];
 		
-		HashMap<Integer,PacketInfo> window = new HashMap();
-
+		Nack nThread = new Nack();
+		nThread.start();
+		//starts nack thread
+		
 		System.out.println( "datagram target is " + destination + " port " + port );
 		System.out.print( "Enter File Name: " );
-		//Packet fileName = new Packet(s.getBytes());
 		socket.setBroadcast( true );
 		
 		while ( (s = stdIn.readLine()) != null )
@@ -64,13 +72,16 @@ public class Sender implements Runnable{
 			 * How do we truncate this into different
 			 * datagram packets?
 			 */
-			int seq = 1;
-			int from = 0;
-			int to = 2047;
+			int max = 2147483647;
+			int seq = 0;
+			int from = -2048;
+			int to = 0;
 			byte [] toSend;
 			PacketInfo packet;
-		
-			while(fileBytes.length > 0)
+			byte flag =0;
+			byte checksum=0;
+			char color = 'r';
+			while(to>=fileBytes.length)
 			{
 				/*
 				 * The packet we are sending.
@@ -87,54 +98,70 @@ public class Sender implements Runnable{
 				 * Size of payload should be 2048.
 				 * 
 				 */
-				if(seq == 1)
+				if(seq == 0)
 				{
 					/*Easily send name of file to Sender first.*/
-					toSend = PacketHelp.makePacket(seq, destination.toString(), InetAddress.getLocalHost().toString(), (byte) 0 , (byte) 1, file.getPath().getBytes());
+					flag=1;
+					toSend = PacketHelp.makePacket(seq, InetAddress.getLocalHost().toString(), color, checksum , flag, file.getName().getBytes());
+					sendPacket = new DatagramPacket( toSend, toSend.length, destination, port );
+					socket.send( sendPacket );
+					synchronized(hashArray){
+						hashArray[seq%10] = new PacketInfo(toSend);
+					}
+					seq++;
 				}
 				else
 				{
-					from += 2048;
-					if(to + 2048 >= fileBytes.length)
-					{
-						to = fileBytes.length - 1;
-						toSend = PacketHelp.makePacket(seq, destination.toString(), InetAddress.getLocalHost().toString(), (byte) 0 , (byte) 2, Arrays.copyOfRange(fileBytes, from, to));
-						synchronized(window)
-						{
-							if(window.size() != MAX)
-							{
-								packet = new PacketInfo(toSend);
-								window.put(seq % 100, packet);
-							}
+					
+					from+=2048; //first increment make from 0
+					if(to+2048>=fileBytes.length-1){
+						to = fileBytes.length-1;
+						flag =2;
+					}
+					else{
+						flag =0;
+						to+=2047;
+					}
+					//increments boundaries, if/else check is for the upper boundary hitting the boundary of the fileBytes array
+					byte[] info =  Arrays.copyOfRange(fileBytes, from, to);
+					toSend = PacketHelp.makePacket(seq, InetAddress.getLocalHost().toString(), color, checksum , flag, info);
+					sendPacket = new DatagramPacket( toSend, toSend.length, destination, port );
+					socket.send( sendPacket );
+					//creates and sends packet
+					
+					synchronized(hashArray){
+						hashArray[seq%10] = new PacketInfo(toSend);
+					}
+					//puts the packetinfo into hash array
+					if(seq==max){
+						seq = 0;
+						if(color == 'r'){
+							color = 'b';
 						}
-						/*Pass last packet to sender thread.*/
-						break;
+						else{
+							color = 'r';
+						}
 					}
-					to += 2048;
-					toSend = PacketHelp.makePacket(seq, destination.toString(), InetAddress.getLocalHost().toString(), (byte) 0 , (byte) 2, Arrays.copyOfRange(fileBytes, from, to));
-				}
-				synchronized(window)
-				{
-					if(window.size() != MAX)
-					{
-						packet = new PacketInfo(toSend);
-						window.put(seq % 100, packet);
+					else{
+						seq++;
 					}
+					//switches color if overflow is about to happen and resets sequence
+					if(seq%10==0){
+						while(!isEmpty()){
+							Thread.sleep(100);
+						}
+					}
+					//checks to see if window(hash array) is empty, sleeps for a second if it's not
+					//in this way, it will only move onto the next window of 10 when all objects have been acknowledged
 				}
-				seq++;
-				sendPacket = new DatagramPacket( s.getBytes(), s.getBytes().length, destination, port ); //Congestion may be a problem if the buffer is not large enough.
-				/*needs to be handled in different thread*/
-				socket.send( sendPacket );
 			}
-			
-			//To check size...
-			System.out.println("This is the size of the byte array: " + fileBytes.length);
-			
-			sendPacket = new DatagramPacket( s.getBytes(), s.getBytes().length, destination, port );
-			//byte [] bytes = sendPacket.getData();
-			socket.send( sendPacket );
+				//To check size...
+				//System.out.println("This is the size of the byte array: " + fileBytes.length);
 			System.out.println( "Enter a File Name: " );
 		}
+		//what is good termination condition for file query loop?
+		
+		nThread.terminate = true;
 		
 		/*while ( s != null )
 		{
@@ -146,12 +173,16 @@ public class Sender implements Runnable{
 			System.out.println("AFTER CONVERTING TO STRING: " + get_istring(get_int(s.getBytes())));
 			System.out.print( "Enter file name: " );
 		}*/
-		System.out.println( "Normal end of sender2." );
 	}
-
-	@Override
-	public void run()
-	{
-		
+	private static boolean isEmpty(){
+		synchronized(hashArray){
+			for(int i=0; i<hashArray.length; i++){
+				if(hashArray[i]!=null){
+					return false;
+				}
+			}
+		}
+		return true;
 	}
+	//checks if window is completely empty
 }
