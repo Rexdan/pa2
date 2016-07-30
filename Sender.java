@@ -4,7 +4,7 @@ import java.nio.file.*;
 import java.util.Arrays;
 import java.util.HashMap;
 
-public class Sender{
+public class Sender implements Runnable{
 	
 	//HashMap<Integer, Packet> packets = new HashMap<>();
 	
@@ -78,10 +78,10 @@ public class Sender{
 			int to = 0;
 			byte [] toSend;
 			PacketInfo packet;
-			byte flag =0;
-			byte checksum=0;
+			byte flag = 0;
+			byte checksum = 0;
 			char color = 'r';
-			while(to>=fileBytes.length)
+			while(to >= fileBytes.length)
 			{
 				/*
 				 * The packet we are sending.
@@ -104,25 +104,31 @@ public class Sender{
 					flag=1;
 					toSend = PacketHelp.makePacket(seq, InetAddress.getLocalHost().toString(), color, checksum , flag, 3001, file.getName().getBytes());
 					sendPacket = new DatagramPacket( toSend, toSend.length, destination, port );
-					socket.send( sendPacket );
-					synchronized(hashArray){
+					
+					synchronized(hashArray)
+					{
 						hashArray[seq%10] = new PacketInfo(toSend);
 					}
+					
+					socket.send( sendPacket );
 					seq++;
 				}
 				else
 				{
 					
-					from+=2048; //first increment make from 0
-					if(to+2048>=fileBytes.length-1){
+					from += 2048; /*first increment make from 0*/
+					
+					/*If the to index becomes greater than last index--we are at EOF*/
+					if((to + 2048) >= (fileBytes.length-1)){
 						to = fileBytes.length-1;
-						flag =2;
+						flag = 2;
 					}
 					else{
-						flag =0;
-						to+=2047;
+						flag = 0;
+						to += 2047;
 					}
-					//increments boundaries, if/else check is for the upper boundary hitting the boundary of the fileBytes array
+					
+					/*increments boundaries, if/else check is for the upper boundary hitting the boundary of the fileBytes array*/
 					byte[] info =  Arrays.copyOfRange(fileBytes, from, to);
 					toSend = PacketHelp.makePacket(seq, InetAddress.getLocalHost().toString(), color, checksum , flag, 3001, info);
 					sendPacket = new DatagramPacket( toSend, toSend.length, destination, port );
@@ -133,7 +139,8 @@ public class Sender{
 						hashArray[seq%10] = new PacketInfo(toSend);
 					}
 					//puts the packetinfo into hash array
-					if(seq==max){
+					
+					if(seq == max){
 						seq = 0;
 						if(color == 'r'){
 							color = 'b';
@@ -145,44 +152,48 @@ public class Sender{
 					else{
 						seq++;
 					}
-					//switches color if overflow is about to happen and resets sequence
-					if(seq%10==0){
+					/*switches color if overflow is about to happen and resets sequence.*/
+					
+					if(seq %10 == 0){
 						while(!isEmpty()){
-							Thread.sleep(100);
+							Thread.sleep(1000);
 						}
 					}
-					//checks to see if window(hash array) is empty, sleeps for a second if it's not
-					//in this way, it will only move onto the next window of 10 when all objects have been acknowledged
+					/*
+					 * checks to see if window(hash array) is empty, sleeps for a second if it's not
+					 * in this way, it will only move onto the next window of 10 when all objects have been acknowledged
+					 * 
+					 * But all that you're doing here is checking if the current sequence number is going into the first index
+					 * and putting the thread to sleep. I get what's going on, but nothing is being done in that block of code other
+					 * than sleeping.
+					 * 
+					 * Need to implement something for resending the packets, i.e. the runnable method here.
+					 * 
+					 */
 				}
 			}
-				//To check size...
-				//System.out.println("This is the size of the byte array: " + fileBytes.length);
 			System.out.println( "Enter a File Name: " );
 		}
-		//what is good termination condition for file query loop?
+		/*what is good termination condition for file query loop?*/
 		
 		nThread.terminate = true;
-		
-		/*while ( s != null )
-		{
-			file = new File(s);
-			sendPacket = new DatagramPacket( s.getBytes(), s.getBytes().length, destination, port );
-			socket.send( sendPacket );
-			
-			System.out.println("AFTER CONVERTING TO INT: " + get_int(s.getBytes()));
-			System.out.println("AFTER CONVERTING TO STRING: " + get_istring(get_int(s.getBytes())));
-			System.out.print( "Enter file name: " );
-		}*/
 	}
 	private static boolean isEmpty(){
 		synchronized(hashArray){
-			for(int i=0; i<hashArray.length; i++){
-				if(hashArray[i]!=null){
+			for(int i = 0; i < hashArray.length; i++){
+				if(hashArray[i] != null){
 					return false;
 				}
 			}
 		}
 		return true;
 	}
-	//checks if window is completely empty
+	/*checks if window is completely empty*/
+	@Override
+	public void run()
+	{
+		/*
+		 * 
+		 */
+	}
 }

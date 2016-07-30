@@ -20,6 +20,19 @@ public class Test {
 		
 		byte [] fileBytes;
 		
+		try
+		{
+			String temp = "test.txt";
+			byte [] tempy = temp.getBytes();
+			String blah = new String(tempy);
+			System.out.println(blah);
+			File tempFile = new File(blah);
+			tempFile.createNewFile();
+		}catch(Exception e)
+		{
+			
+		}
+		
 		System.out.print("Enter file name: ");
 		String path = stdIn.readLine();
 		
