@@ -23,7 +23,7 @@ public class Nack extends Thread{
 						}
 					}
 				}
-				Thread.sleep(100);
+				Thread.sleep(1000);
 			}
 			return;
 		} catch (Exception e) {

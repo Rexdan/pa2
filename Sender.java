@@ -16,6 +16,9 @@ public class Sender implements Runnable{
 	
 	static File file;
 	
+	static byte [] toSend;
+
+	
 	final private static int MAX = 100;
 	
 	public static PacketInfo [] hashArray;
@@ -34,7 +37,7 @@ public class Sender implements Runnable{
 		DatagramPacket		sendPacket;
 		DatagramSocket		socket = new DatagramSocket();
 		BufferedReader		stdIn = new BufferedReader( new InputStreamReader( System.in ) );
-		int			port = 3000;
+		int			port = 3001;
 		String s /*= stdIn.readLine()*/;
 		File file = null;
 		FileInputStream fin;
@@ -43,8 +46,8 @@ public class Sender implements Runnable{
 		byte [] fileBytes;
 		hashArray = new PacketInfo[10];
 		
-		Nack nThread = new Nack();
-		nThread.start();
+		//Nack nThread = new Nack();
+		//nThread.start();
 		//starts nack thread
 		
 		System.out.println( "datagram target is " + destination + " port " + port );
@@ -72,16 +75,16 @@ public class Sender implements Runnable{
 			 * How do we truncate this into different
 			 * datagram packets?
 			 */
-			int max = 2147483647;
+			int max = 2147483639;
 			int seq = 0;
-			int from = -2048;
-			int to = 0;
-			byte [] toSend;
+			int from = -1024;
+			int to = -1;
 			PacketInfo packet;
 			byte flag = 0;
 			byte checksum = 0;
 			char color = 'r';
-			while(to >= fileBytes.length)
+			boolean terminate = false;
+			while(!terminate)
 			{
 				/*
 				 * The packet we are sending.
@@ -95,14 +98,16 @@ public class Sender implements Runnable{
 				 * flag 1 = name of file/first packet
 				 * flag 2 = EOF/last packet
 				 * 
-				 * Size of payload should be 2048.
+				 * Size of payload should be 1024.
 				 * 
 				 */
 				if(seq == 0)
 				{
 					/*Easily send name of file to Sender first.*/
 					flag=1;
+					//System.out.println("fileGetName: " + file.getName().getBytes() + "size: " + file.getName().getBytes().length);
 					toSend = PacketHelp.makePacket(seq, InetAddress.getLocalHost().toString(), color, checksum , flag, 3001, file.getName().getBytes());
+					System.out.println("After making first packet for name: " + toSend.length);
 					sendPacket = new DatagramPacket( toSend, toSend.length, destination, port );
 					
 					synchronized(hashArray)
@@ -112,25 +117,39 @@ public class Sender implements Runnable{
 					
 					socket.send( sendPacket );
 					seq++;
+					//from = toSend.length;
+					//to = toSend.length + 2047;
 				}
 				else
 				{
 					
-					from += 2048; /*first increment make from 0*/
 					
 					/*If the to index becomes greater than last index--we are at EOF*/
-					if((to + 2048) >= (fileBytes.length-1)){
-						to = fileBytes.length-1;
+					int whatever = to + 1024;
+					if(whatever >= (fileBytes.length+1)){
+						from += 1024;
+						//System.out.println("filebytes.length: " + fileBytes.length);
+						to = fileBytes.length+1;
+						//System.out.println("after filebytes.length: " + to);
 						flag = 2;
+						//System.out.println("HERE: if");
+						terminate = true;
 					}
 					else{
 						flag = 0;
-						to += 2047;
+						from += 1024;
+						to += 1024;
+						//System.out.println("HERE: ELSE");
 					}
 					
 					/*increments boundaries, if/else check is for the upper boundary hitting the boundary of the fileBytes array*/
+					//System.out.printf("From: %d To: %d \n", from, to);
 					byte[] info =  Arrays.copyOfRange(fileBytes, from, to);
+					System.out.println("from: " + from +"\n"+"to: " + to);
 					toSend = PacketHelp.makePacket(seq, InetAddress.getLocalHost().toString(), color, checksum , flag, 3001, info);
+					
+					System.out.println("toSend Length: " + toSend.length);
+					
 					sendPacket = new DatagramPacket( toSend, toSend.length, destination, port );
 					socket.send( sendPacket );
 					//creates and sends packet
@@ -150,6 +169,7 @@ public class Sender implements Runnable{
 						}
 					}
 					else{
+						System.out.println("seq: " + seq);
 						seq++;
 					}
 					/*switches color if overflow is about to happen and resets sequence.*/
@@ -172,11 +192,11 @@ public class Sender implements Runnable{
 					 */
 				}
 			}
-			System.out.println( "Enter a File Name: " );
+			//System.out.println( "Enter a File Name: " );
 		}
 		/*what is good termination condition for file query loop?*/
 		
-		nThread.terminate = true;
+		//nThread.terminate = true;
 	}
 	private static boolean isEmpty(){
 		synchronized(hashArray){

@@ -17,6 +17,8 @@ public class PacketHelp
 	{	
 		int length = payLoad.length +19;
 		
+		System.out.println("Length: " + length);
+		
 		byte [] bytes = new byte[length];
 		Integer sequence = seq;
 		int a,b,c,d;
@@ -34,7 +36,14 @@ public class PacketHelp
 		String byte1;
 		String byte2;
 		String byte3;
-		int breakpoint1 = ip.indexOf(".");
+		byte [] ipBytes = ip.getBytes();
+		bytes[4] = ipBytes[0];
+		bytes[5] = ipBytes[1];
+		bytes[6] = ipBytes[2];
+		bytes[7] = ipBytes[3];
+		//System.out.println("Size of ip address: " + ipBytes.length);
+		
+		/*int breakpoint1 = ip.indexOf(".");
 		int breakpoint2 = ip.indexOf(".", breakpoint1+1);
 		int breakpoint3 = ip.indexOf(".", breakpoint2+1);
 		byte0 = ip.substring(0, breakpoint1);
@@ -48,7 +57,7 @@ public class PacketHelp
 		bytes[4] = (byte) (a & 0xFF);
 		bytes[5] = (byte) (b & 0xFF);
 		bytes[6] = (byte) (c & 0xFF);
-		bytes[7] = (byte) (d & 0xFF);
+		bytes[7] = (byte) (d & 0xFF);*/
 		//encodes ip address (can be sender or receiver depending on context)
 		
 		
@@ -93,7 +102,7 @@ public class PacketHelp
 	public static int bytesToInt( byte[] b4 )
 	{
 		int result = 0;
-		Byte bt;
+		/*Byte bt;
 		//System.out.println( "b4[0] is " + b4[0] );
 		//System.out.println( "(b4[0] << 24) is " + (b4[0] << 24) );
 		
@@ -115,7 +124,20 @@ public class PacketHelp
 		}catch(Exception e)
 		{
 			return result;
-		}
+		}*/
+		byte a = b4[0];
+		byte b = b4[1];
+		byte c = b4[2];
+		byte d = b4[3];
+		int e = (int) a & 0xFF;
+		int f = (int) b & 0xFF;
+		int g = (int) c & 0xFF;
+		int h = (int) d & 0xFF;
+		e = e<<24;
+		f = f<<16;
+		g = g<<8;
+		result = e+f+g+h;
+		
 		return result;
 	}
 	
@@ -133,10 +155,11 @@ public class PacketHelp
 	public static int getLength(byte [] bytes)
 	{
 		byte length[] = new byte[4];
-		length[0] = bytes[12];
-		length[1] = bytes[13];
-		length[2] = bytes[14];
-		length[3] = bytes[15];
+		length[0] = bytes[9];
+		length[1] = bytes[10];
+		length[2] = bytes[11];
+		length[3] = bytes[12];
+		System.out.println("getLength PROBLEM CHECK: " + bytesToInt(length));
 		return bytesToInt(length);
 	}
 	
@@ -202,5 +225,63 @@ public class PacketHelp
 			payLoad[i] = bytes[i+19];
 		}
 		return payLoad;
+	}	
+	public static int compareData(byte[] a, byte[] b){
+		int max = 2147483639;
+		int smallStart = 0;
+		int smallEnd = max/2;
+		int bigStart = max/2+1;
+		int bigEnd = max;
+		char colA = getColor(a);
+		char colB = getColor(b);
+		int seqA = getSequenceNumber(a);
+		int seqB = getSequenceNumber(b);
+		boolean isSmallA;
+		boolean isSmallB;
+		
+		if(smallStart<=seqA && seqA<=bigStart){
+			isSmallA = true;
+		}
+		else{
+			isSmallA = false;
+		}
+		if(smallStart<=seqB && seqB<=bigStart){
+			isSmallB = true;
+		}
+		else{
+			isSmallB = false;
+		}
+		
+		if(getColor(a)==getColor(b)){
+			if(getSequenceNumber(a) == getSequenceNumber(b)){
+				return 0;
+			}
+			else if(getSequenceNumber(a) < getSequenceNumber(b)){
+				return 1;
+			}
+			else{
+				return -1;
+			}
+		}
+		else{
+			if((!isSmallA && (colA=='r')) && ((isSmallB) && colA=='b')){
+				return -1;
+			}
+			else if((isSmallA && (colA=='r')) && ((!isSmallB) && colA=='b')){
+				return 1;
+			}
+			else if((isSmallA && (colA=='b')) && ((!isSmallB) && colA=='r')){
+				return 1;
+			}
+			else if((!isSmallA && (colA=='b')) && ((isSmallB) && colA=='r')){
+				return -1;
+			}
+			return -2;
+		}
 	}
+	//compares packetData: 
+	//returns -1 if the first PacketData comes before
+	//returns 1 if the first  PacketData comes After
+	//returns 0 if they are the same packetData labeling
+	//returns -2 if there is an error
 }

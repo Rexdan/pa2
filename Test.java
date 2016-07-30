@@ -22,7 +22,7 @@ public class Test {
 		
 		try
 		{
-			String temp = "test.txt";
+			String temp = "test465456456.txt";
 			byte [] tempy = temp.getBytes();
 			String blah = new String(tempy);
 			System.out.println(blah);
