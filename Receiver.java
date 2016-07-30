@@ -5,6 +5,7 @@ import	java.net.*;
 public class Receiver implements Runnable
 {
 	private static String perc = "";
+	private static PacketInfo[] window = new PacketInfo[10];
 	
 	private void NACK() /*OPTION 2 For Protocol*/
 	{
@@ -71,10 +72,11 @@ public class Receiver implements Runnable
 		File file;
 		boolean needName = true;
 		int stillNeed = 0;
-		PacketInfo[] window = new PacketInfo[10];
-		RandomAccessFile raf;
 		
-		while( true ) /*what would be a good terminating condition for this? Did you forget about the EOF packet?*/
+		RandomAccessFile raf;
+		boolean terminate = false;
+		
+		while( !terminate ) /*what would be a good terminating condition for this? Did you forget about the EOF packet?*/
 		{
 			socket.receive( receivePacket );
 			byte [] data = receivePacket.getData();
@@ -112,7 +114,33 @@ public class Receiver implements Runnable
 			//System.out.println( fileName/*new String( receivePacket.getData() )*/ );
 		}
 	}
-
+	public static int checkStatus(PacketInfo [] window){
+		int i;
+		int a=0;
+		for(i=0; i<window.length; i++){
+			if(window[i]==null){
+				return (i*-1)-10;
+			}
+			else if (PacketHelp.getFlag(window[i].toSend)==1){
+				a+=100;
+			}
+			else if(PacketHelp.getFlag(window[i].toSend)==2){
+				return a+i;
+			}
+		}
+		return a+i;
+	}
+	/*
+	 * The interpretations of the return values are ugly, but I believe it will simplify things for us in the other parts of code:
+	 * 
+	 * checks window if it is full and needs to be placed into the file
+	 * returns (-10 -> -19) if a window slot was empty
+	 * returns 10 if it is full (standard case)
+	 * returns an index (0-9) if an end of file was found
+	 * all ranges given are inclusive
+	 * adds an extra 100 to return value if there is a beginning of file contained in the window
+	 * unless the window is incomplete
+	 */
 	@Override
 	public void run()
 	{

@@ -189,7 +189,10 @@ public class PacketHelp
 			return false;
 		}
 	}
-	
+	public static byte getFlag(byte[] bytes){
+		byte b = bytes[14];
+		return b;
+	}
 	public static byte [] getPayLoad(byte [] bytes, int length) /*Length Refers to FULL Payload Length*/
 	{
 		byte [] payLoad = new byte[length-19];
