@@ -8,13 +8,14 @@ public class PacketHelp
 	 * Next 4 Byes are the total payload length with header (Index 9-12 inclusive)
 	 * Next 1 Byte is the checksum (Index 13 inclusive)
 	 * Next 1 Byte is the Flag(Index 14 inclusive)
-	 * Remaining packet size is the headerless payoad. (15-)
+	 * Next 4 Bytes are the Port Number (Index 15-18)
+	 * Remaining packet size is the headerless payoad. (19-)
 	 */
 	//We may include a checksum byte and a byte for flagging the end of file.
 	
-	public static byte [] makePacket(int seq, String ip, char color, byte checksum, byte flag, byte [] payLoad)
+	public static byte [] makePacket(int seq, String ip, char color, byte checksum, byte flag, int port, byte [] payLoad)
 	{	
-		int length = payLoad.length +15;
+		int length = payLoad.length +19;
 		
 		byte [] bytes = new byte[length];
 		Integer sequence = seq;
@@ -72,8 +73,17 @@ public class PacketHelp
 		bytes[14] = flag;
 		//copies the flag into the packet
 		
-		for(int i=15; i<length; i++){
-			bytes[i] = payLoad[i-15];
+		d = port & 0x000000ff;
+		c = (port >> 8) & 0x000000ff;
+		b = (port >> 16) & 0x000000ff;
+		a = (port >> 24) & 0x000000ff;
+		bytes[15] = (byte) a;
+		bytes[16] = (byte) b;
+		bytes[17] = (byte) c;
+		bytes[18] = (byte) d;
+		
+		for(int i=19; i<length; i++){
+			bytes[i] = payLoad[i-19];
 		}
 		//bundles the payload with the header
 		
@@ -154,6 +164,15 @@ public class PacketHelp
 		String temp = a + "." + b + "." + c + "." + d;
 		return temp;
 	}
+	public static int getPort(byte [] bytes)
+	{
+		byte [] p = new byte[4];
+		p[0] = bytes[15];
+		p[1] = bytes[16];
+		p[2] = bytes[17];
+		p[3] = bytes[18];
+		return bytesToInt(p);
+	}
 	
 	public static char getColor(byte [] bytes)
 	{
@@ -162,14 +181,22 @@ public class PacketHelp
 		char c = (char) (byteChar[0] & 0xFF);
 		return c;
 	}
+	public static boolean checkTheSum(byte [] bytes){
+		if(bytes[13]==0){
+			return true;
+		}
+		else{
+			return false;
+		}
+	}
 	
 	public static byte [] getPayLoad(byte [] bytes, int length) /*Length Refers to FULL Payload Length*/
 	{
-		byte [] payLoad = new byte[length-15];
+		byte [] payLoad = new byte[length-19];
 		
 		for(int i = 0; i < payLoad.length; i++)
 		{
-			payLoad[i] = bytes[i+15];
+			payLoad[i] = bytes[i+19];
 		}
 		return payLoad;
 	}

@@ -102,7 +102,7 @@ public class Sender{
 				{
 					/*Easily send name of file to Sender first.*/
 					flag=1;
-					toSend = PacketHelp.makePacket(seq, InetAddress.getLocalHost().toString(), color, checksum , flag, file.getName().getBytes());
+					toSend = PacketHelp.makePacket(seq, InetAddress.getLocalHost().toString(), color, checksum , flag, 3001, file.getName().getBytes());
 					sendPacket = new DatagramPacket( toSend, toSend.length, destination, port );
 					socket.send( sendPacket );
 					synchronized(hashArray){
@@ -124,7 +124,7 @@ public class Sender{
 					}
 					//increments boundaries, if/else check is for the upper boundary hitting the boundary of the fileBytes array
 					byte[] info =  Arrays.copyOfRange(fileBytes, from, to);
-					toSend = PacketHelp.makePacket(seq, InetAddress.getLocalHost().toString(), color, checksum , flag, info);
+					toSend = PacketHelp.makePacket(seq, InetAddress.getLocalHost().toString(), color, checksum , flag, 3001, info);
 					sendPacket = new DatagramPacket( toSend, toSend.length, destination, port );
 					socket.send( sendPacket );
 					//creates and sends packet
