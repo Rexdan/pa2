@@ -17,7 +17,7 @@ public class PacketHelp
 	{	
 		int length = payLoad.length +19;
 		
-		System.out.println("Length: " + length);
+		//System.out.println("Length: " + length);
 		
 		byte [] bytes = new byte[length];
 		Integer sequence = seq;
@@ -36,14 +36,15 @@ public class PacketHelp
 		String byte1;
 		String byte2;
 		String byte3;
-		byte [] ipBytes = ip.getBytes();
+		/*byte [] ipBytes = ip.getBytes();
 		bytes[4] = ipBytes[0];
 		bytes[5] = ipBytes[1];
 		bytes[6] = ipBytes[2];
-		bytes[7] = ipBytes[3];
+		bytes[7] = ipBytes[3];*/
+		
 		//System.out.println("Size of ip address: " + ipBytes.length);
 		
-		/*int breakpoint1 = ip.indexOf(".");
+		int breakpoint1 = ip.indexOf(".");
 		int breakpoint2 = ip.indexOf(".", breakpoint1+1);
 		int breakpoint3 = ip.indexOf(".", breakpoint2+1);
 		byte0 = ip.substring(0, breakpoint1);
@@ -57,7 +58,7 @@ public class PacketHelp
 		bytes[4] = (byte) (a & 0xFF);
 		bytes[5] = (byte) (b & 0xFF);
 		bytes[6] = (byte) (c & 0xFF);
-		bytes[7] = (byte) (d & 0xFF);*/
+		bytes[7] = (byte) (d & 0xFF);
 		//encodes ip address (can be sender or receiver depending on context)
 		
 		
@@ -227,9 +228,11 @@ public class PacketHelp
 	}	
 	public static int compareData(byte[] a, byte[] b){
 		int max = 2147483639;
+		/*Range for small is between 0 and max/2*/
 		int smallStart = 0;
 		int smallEnd = max/2;
-		int bigStart = max/2+1;
+		/*Range for small is between max/2 + 1 and max*/
+		int bigStart = (max/2)+1;
 		int bigEnd = max;
 		char colA = getColor(a);
 		char colB = getColor(b);
@@ -238,41 +241,41 @@ public class PacketHelp
 		boolean isSmallA;
 		boolean isSmallB;
 		
-		if(smallStart<=seqA && seqA<=bigStart){
+		if(smallStart <= seqA && seqA <= smallEnd){
 			isSmallA = true;
 		}
 		else{
 			isSmallA = false;
 		}
-		if(smallStart<=seqB && seqB<=bigStart){
+		if(smallStart <= seqB && seqB <= smallEnd){
 			isSmallB = true;
 		}
 		else{
 			isSmallB = false;
 		}
 		
-		if(getColor(a)==getColor(b)){
-			if(getSequenceNumber(a) == getSequenceNumber(b)){
+		if(colA == colB){
+			if(seqA == seqB){
 				return 0;
 			}
-			else if(getSequenceNumber(a) < getSequenceNumber(b)){
-				return 1;
+			else if(seqA < seqB){
+				return -1;
 			}
 			else{
-				return -1;
+				return 1;
 			}
 		}
 		else{
-			if((!isSmallA && (colA=='r')) && ((isSmallB) && colA=='b')){
+			if((!isSmallA && (colA=='r')) && ((isSmallB) && colB=='b')){
 				return -1;
 			}
-			else if((isSmallA && (colA=='r')) && ((!isSmallB) && colA=='b')){
+			else if((isSmallA && (colA=='r')) && ((!isSmallB) && colB=='b')){
 				return 1;
 			}
-			else if((isSmallA && (colA=='b')) && ((!isSmallB) && colA=='r')){
+			else if((isSmallA && (colA=='b')) && ((!isSmallB) && colB=='r')){
 				return 1;
 			}
-			else if((!isSmallA && (colA=='b')) && ((isSmallB) && colA=='r')){
+			else if((!isSmallA && (colA=='b')) && ((isSmallB) && colB=='r')){
 				return -1;
 			}
 			return -2;

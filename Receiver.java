@@ -7,15 +7,19 @@ public class Receiver implements Runnable
 	private static String perc = "";
 	private static PacketInfo[] window = new PacketInfo[10];
 	public static DatagramSocket socket;
+	public static DatagramSocket nackSocket;
 	public static 	FileOutputStream fileOutputStream = null;
 	public static String senderIP = "";
 
 	private static void sendNACK(char c ,int seq) throws Exception /*OPTION 2 For Protocol*/
 	{
 		byte [] bleh = new byte[1024];
-		bleh = PacketHelp.makePacket(seq, InetAddress.getLocalHost().toString(), c, (byte) 0, (byte) 0, 3001, bleh);
+		InetAddress ip = InetAddress.getLocalHost();
+		String addr = ip.getHostAddress();
+		bleh = PacketHelp.makePacket(seq, addr, c, (byte) 0, (byte) 0, 3003, bleh);
 		DatagramPacket toSend = new DatagramPacket(bleh, bleh.length);
-		socket.send(toSend);
+		System.out.println("Sending Nack: " + PacketHelp.getSequenceNumber(bleh));
+		nackSocket.send(toSend);
 	}
 	
 	private static boolean packetLossEmulator()
@@ -40,6 +44,8 @@ public class Receiver implements Runnable
 		int max =2147483639;
 		//perc = args[1];
 		socket = new DatagramSocket( 3001 );
+		nackSocket = new DatagramSocket(3003);
+		nackSocket.connect(InetAddress.getByName(senderIP), 3002);
 		//socket.connect(InetAddress.getLocalHost(), 3000);
 		/*DatagramSocket nSocket = new DatagramSocket();
 		nSocket.connect(InetAddress.getLocalHost(), 3001);*/
@@ -52,7 +58,7 @@ public class Receiver implements Runnable
 		 * How is it going to keep getting new packets?
 		 */
 		
-		byte []	payload = new byte[2048 + 19];
+		byte []	payload = new byte[1024 + 19];
 		byte [] fileBytes;
 		
 		/*if(packetLossEmulator())
@@ -69,6 +75,8 @@ public class Receiver implements Runnable
 		//System.out.println("Marker 1");
 		socket.setSoTimeout(10000);
 		
+		int debug = 0;
+		
 		boolean terminate = false;
 		
 		
@@ -79,30 +87,56 @@ public class Receiver implements Runnable
 			int count = 0;
 			while(count < 10)
 			{
+				debug++;
 				try{
 					socket.receive( receivePacket );
-
 				}
 				catch(SocketTimeoutException e){
 					System.out.println("BREAKING OUT");
+					//terminate = true;
 					break;
+				}
+				System.out.println("Attempting to place: " + debug);
+				if(debug == 11)
+				{
+					System.out.println("This is the debug 11 sequence number: " + PacketHelp.getSequenceNumber(receivePacket.getData()));
 				}
 				placingPacket(receivePacket);
 				count++;
 			}
-			System.out.println("Count Check: "+count);
+			/*if(terminate)
+			{
+				System.out.println("Socket Timeout...");
+				break;
+			}*/
+		//	System.out.println("Count Check: "+count);
 			System.out.println("Marker 3");
 		//	System.out.println("Checking fileName packet: " + PacketHelp.getFlag(window[0].toSend));
-			int status1 = checkStatus(window);
-			System.out.println("Status1 check: " + status1);
+			double status1 = checkStatus(window);
 			int status2;
-			if(status1 > 11){ //implies that the first packet is within the window
-				status2 = status1 - 100;
+			boolean hasFirst = false;
+			
+			if(status1 % 1 == 0 )
+			{
+				status2 = (int)status1;
+			}
+			else
+			{
+				status2 = (int)(status1 - .5);
+				hasFirst = true;
+			}
+			System.out.println("Status1 check: " + status1);
+			/*int status1 = checkStatus(window);
+			System.out.println("Status1 check: " + status1);
+			int status2;*/
+			
+			if(hasFirst){ //implies that the first packet is within the window
+				//status2 = status1 - 100;
 				System.out.println("Marker 4");
 
 				if(status2 < 0){ //case where a packet is missing in the window
 					status2 = (status2+10)*-1; //converts the negative number to the index of the missing packet in the window
-					stillNeed = status2;
+					//stillNeed = status2;
 					sendNACK(colorNeed, stillNeed);
 					System.out.println("Marker 4a");
 					continue;
@@ -124,8 +158,9 @@ public class Receiver implements Runnable
 						System.out.println("File created...");
 						fileOutputStream = new FileOutputStream(file, true); 
 						senderIP = PacketHelp.getIP(data);
-						InetAddress addr = InetAddress.getByName(senderIP);
-						socket.connect(addr, 3001);
+						InetAddress cnct = InetAddress.getByName(senderIP);
+						System.out.println("This is the IP address on the Receiver: " + senderIP);
+						//socket.connect(cnct, 3001);
 						window[0] = null;
 						stillNeed++;		
 						System.out.println("Marker 4c");
@@ -148,7 +183,7 @@ public class Receiver implements Runnable
 					for(int i=1; i<status2+1; i++){
 						window[i] = null;
 					}
-					fileOutputStream.close();
+					//fileOutputStream.close();
 					sendNACK(colorNeed, stillNeed);
 					terminate = true;
 				}
@@ -170,8 +205,9 @@ public class Receiver implements Runnable
 						System.out.println("File created...");
 						fileOutputStream = new FileOutputStream(file, true); 
 						senderIP = PacketHelp.getIP(data);
-						InetAddress addr = InetAddress.getByName(senderIP);
-						socket.connect(addr, 3001);
+						InetAddress cnct = InetAddress.getByName(senderIP);
+						System.out.println("This is the IP address on the Receiver: " + senderIP);
+						//socket.connect(cnct, 3001);
 						window[0] = null;
 						stillNeed++;
 					}catch(Exception e)
@@ -200,15 +236,15 @@ public class Receiver implements Runnable
 			else {
 				System.out.println("Marker 6");
 
-				if(status1 < 0){ //no first packet within window, and we're missing a packet in the window
-					status2 = (status1+10)*(-1);
-					stillNeed = status2;
-					sendNACK(colorNeed, status2);
+				if(status2 < 0){ //no first packet within window, and we're missing a packet in the window
+					status2 = (status2+10)*(-1);
+					//stillNeed = status2;
+					sendNACK(colorNeed, stillNeed);
 					continue;
 				}
-				else if((status1 >= 0) && (status1 <= 9) ){//last packet is within window
+				else if((status2 >= 0) && (status2 <= 9) ){//last packet is within window
 					System.out.println("Marker 6a");
-					status2 = status1; 
+					//status2 = status1; 
 					writeToFile(0, status2, file);
 					stillNeed = window[status2].seq+1;
 					if(stillNeed>max){
@@ -225,7 +261,7 @@ public class Receiver implements Runnable
 						window[i] = null;
 					}
 					sendNACK(colorNeed, stillNeed);
-					fileOutputStream.close();
+					//fileOutputStream.close();
 					terminate = true;
 				}
 				else{ //no beginning packet, no end packet, everything is filled, general case
@@ -253,7 +289,7 @@ public class Receiver implements Runnable
 				
 			}
 		}
-
+		fileOutputStream.close();
 	}
 	public static void writeToFile(int start, int end, File file) throws IOException{
 		byte [] temp;
@@ -261,13 +297,12 @@ public class Receiver implements Runnable
 		for(int i = start; i < end+1; i++){
 			
 			temp = PacketHelp.getPayLoad(window[i].toSend, window[i].toSend.length);
-			
-			
+
 			try
 			{ 
 			    
 			    fileOutputStream.write(temp);
-			    //System.out.println("Wrote into file. File size is: " + file.length());
+			    System.out.println("Wrote into file. File size is: " + file.length());
 			    
 			    
 			}catch(Exception e)
@@ -275,26 +310,20 @@ public class Receiver implements Runnable
 				e.printStackTrace();
 				System.err.println("Something went wrong when we tried to get the fileOutPutStream...");
 			}
-
-			
-			
-			
-			
-			
 		}
 		//System.out.println("fileBytes.length after Copying: " + fileBytes.length);
 		//System.out.println("Temp.length after Copying: " + temp.length);
 		
 	}
-	public static int checkStatus(PacketInfo [] window){
+	public static double checkStatus(PacketInfo [] window){
 		int i;
-		int a=0;
+		double a=0;
 		for(i=0; i<window.length; i++){
 			if(window[i]==null){
 				return (i*-1)-10;
 			}
 			else if (PacketHelp.getFlag(window[i].toSend)==1){
-				a+=100;
+				a+=.5;
 			}
 			else if(PacketHelp.getFlag(window[i].toSend)==2){
 				return a+i;
@@ -326,6 +355,7 @@ public class Receiver implements Runnable
 				if((p.seq % 10) == i)
 				{
 					window[i] = p;
+					System.out.println("Placement successful.");
 					return true;
 				}
 			}
