@@ -346,7 +346,14 @@ public class Receiver implements Runnable
 	{
 		byte [] data = packet.getData();
 		int length = PacketHelp.getLength(data);
+		byte [] temp = Arrays.copyOfRange(data, 0, length);
 		PacketInfo p = new PacketInfo(Arrays.copyOfRange(data, 0, length));
+		boolean checkSum = PacketHelp.checkTheSum(temp);
+		
+		if(!checkSum)
+		{
+			return false;
+		}
 		
 		for(int i = 0; i < window.length; i++)
 		{

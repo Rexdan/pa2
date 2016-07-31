@@ -1,9 +1,9 @@
 import	java.io.*;
 import	java.net.*;
 import java.nio.file.*;
-import java.util.Arrays;
+import java.util.*;
 
-public class Sender implements Runnable{
+public class Sender{
 	
 	//HashMap<Integer, Packet> packets = new HashMap<>();
 	
@@ -18,6 +18,8 @@ public class Sender implements Runnable{
 	static byte [] toSend;
 	
 	private static DatagramSocket socket;
+	
+	public static Timer [] timers = new Timer[10];
 
 	public static DatagramSocket getSocket()
 	{
@@ -224,12 +226,11 @@ public class Sender implements Runnable{
 		}
 		return true;
 	}
-	/*checks if window is completely empty*/
-	@Override
-	public void run()
+	public static void resend(int i)
 	{
-		/*
-		 * 
-		 */
+		timers[i].cancel();
+		timers[i] = new Timer();
+		timers[i].schedule(new Sender(), 3000);
 	}
+	/*checks if window is completely empty*/
 }

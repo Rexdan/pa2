@@ -16,12 +16,14 @@ public class Nack extends Thread{
 			int debug = 0;
 			while(terminate==false )
 			{
-				System.out.println("Attempting to receive nack: " + debug);
+				//System.out.println("Attempting to receive nack: " + debug);
 				socket.receive( receivePacket );
-				System.out.println("Nack received.");
+				//System.out.println("Nack received.");
 				debug++;
 				byte[] buffer = receivePacket.getData();
 				byte[] b = Arrays.copyOfRange(buffer, 0, PacketHelp.getLength(buffer));
+				
+				boolean checkSum = PacketHelp.checkTheSum(b);
 				
 				synchronized(Sender.hashArray){
 					
@@ -30,9 +32,9 @@ public class Nack extends Thread{
 						if(Sender.hashArray[i]!=null ){
 							
 							byte [] a = Sender.hashArray[i].toSend;
-							System.out.printf("index %d not null.\n", i);
-							if( PacketHelp.compareData( a , b )  <  0 ){
-								System.out.printf("Packet %d removed.\n", i);
+							//System.out.printf("index %d not null.\n", i);
+							if( PacketHelp.compareData( a , b )  <  0 && checkSum ){
+								//System.out.printf("Packet %d removed.\n", i);
 								Sender.hashArray[i] = null;
 							}
 						}
