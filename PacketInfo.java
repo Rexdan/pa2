@@ -13,7 +13,9 @@ public class PacketInfo
 	
 	public byte [] toSend;
 	
-	final public int seq;
+	 public int seq;
+	
+	 public char c;
 	
 	public PacketInfo next;
 	
@@ -33,10 +35,36 @@ public class PacketInfo
 		}
 	}
 	
+	@Override
+	public boolean equals(Object o)
+	{
+		PacketInfo p = new PacketInfo();
+
+		if(o == null)
+		{
+			return false;
+		}
+
+		else if(o instanceof PacketInfo)
+		{
+			p = (PacketInfo) p;
+		}
+
+		if(this.seq == p.seq && this.c == p.c) return true;
+
+		else return false;
+	}
+	
+	public PacketInfo()
+	{
+		
+	}
+	
 	public PacketInfo(byte [] input)
 	{
 		pendingReceivers = new ArrayList<DatagramPacket>();
 		seq = PacketHelp.getSequenceNumber(input);
+		c = PacketHelp.getColor(input);
 		toSend = input;
 	}
 }

@@ -6,10 +6,16 @@ public class Receiver implements Runnable
 {
 	private static String perc = "";
 	private static PacketInfo[] window = new PacketInfo[10];
-	
-	private void NACK() /*OPTION 2 For Protocol*/
+	public static DatagramSocket socket;
+	public static 	FileOutputStream fileOutputStream = null;
+	public static String senderIP = "";
+
+	private static void sendNACK(char c ,int seq) throws Exception /*OPTION 2 For Protocol*/
 	{
-		
+		byte [] bleh = new byte[1024];
+		bleh = PacketHelp.makePacket(seq, InetAddress.getLocalHost().toString(), c, (byte) 0, (byte) 0, 3001, bleh);
+		DatagramPacket toSend = new DatagramPacket(bleh, bleh.length);
+		socket.send(toSend);
 	}
 	
 	private static boolean packetLossEmulator()
@@ -28,28 +34,12 @@ public class Receiver implements Runnable
 		}
 		else return false;
 	}
-	
-	private void writeFile( )
-	{
-		FileOutputStream stream = null;
-		try 
-		{
-		   // stream.write(packet.getBytes());
-		}catch(Exception e)
-		{
-			e.printStackTrace();
-		}
-		finally 
-		{
-		    //stream.close();
-		}
-	}
 
 	public static void main(String[] args) throws Exception 
 	{
-		
+		int max =2147483639;
 		//perc = args[1];
-		DatagramSocket	socket = new DatagramSocket( 3001 );
+		socket = new DatagramSocket( 3001 );
 		//socket.connect(InetAddress.getLocalHost(), 3000);
 		/*DatagramSocket nSocket = new DatagramSocket();
 		nSocket.connect(InetAddress.getLocalHost(), 3001);*/
@@ -75,93 +65,226 @@ public class Receiver implements Runnable
 		File file = null;
 		boolean needName = true;
 		int stillNeed = 0;
+		char colorNeed  ='r';
+		//System.out.println("Marker 1");
+		socket.setSoTimeout(10000);
 		
-		FileOutputStream fileOutputStream = null;
-		
-		RandomAccessFile raf;
 		boolean terminate = false;
+		
 		
 		while( !terminate ) /*what would be a good terminating condition for this? Did you forget about the EOF packet?*/
 		{
-			socket.receive( receivePacket );
-			System.out.println("After receiving packet.");
-			byte [] data = receivePacket.getData();
-						
-			int seq = PacketHelp.getSequenceNumber(data);
-			System.out.println("seq: " + seq);
+			//System.out.println("Marker 2");
 			
-			int dataLength = PacketHelp.getLength(data);
-			System.out.println("Size of Data Byte array: " + dataLength);
-			
-			byte[] temp = PacketHelp.getPayLoad(data, dataLength);
-			
-			if(seq == 0 && needName){ //case of first packet
-				//temp = PacketHelp.getPayLoad(data, data.length);
-				fileName = new String(temp);
-				System.out.println("temp.length: "+ temp.length);
-				System.out.println("fileName: "+ fileName + "length: "+ fileName.length());
-				String tempName =fileName;
-				if(!PacketHelp.checkTheSum(data)){
-					/* nack the packet here
-					 * I think we should call a method each time we have to NACK.
-					 * It's cleaner and avoids having to constantly copy the same three lines of code.
-					 * 
-					 * */
-					temp = PacketHelp.makePacket(seq, InetAddress.getLocalHost().toString(), 'r', (byte) 0, (byte) 1, PacketHelp.getPort(data), data);
-					nackPack = new DatagramPacket( temp, temp.length, InetAddress.getByName(PacketHelp.getIP(data)), PacketHelp.getPort(data)  );
-					socket.send(nackPack);
+			int count = 0;
+			while(count < 10)
+			{
+				try{
+					socket.receive( receivePacket );
+
 				}
-				else{
-					/*
-					 * fileName = new String(temp);
-					 * file = new File(System.getProperty("user.dir")+ "\\"+ fileName);
-					 * raf = new RandomAccessFile(file, "rw");
-					*/
-					/*if(window[PacketHelp.getSequenceNumber(data)%10] == null){
-						window[PacketHelp.getSequenceNumber(data)%10] = new PacketInfo(data);
-					}*/
-					/*ignore duplicate packet*/
-					
+				catch(SocketTimeoutException e){
+					System.out.println("BREAKING OUT");
+					break;
+				}
+				placingPacket(receivePacket);
+				count++;
+			}
+			System.out.println("Count Check: "+count);
+			System.out.println("Marker 3");
+		//	System.out.println("Checking fileName packet: " + PacketHelp.getFlag(window[0].toSend));
+			int status1 = checkStatus(window);
+			System.out.println("Status1 check: " + status1);
+			int status2;
+			if(status1 > 11){ //implies that the first packet is within the window
+				status2 = status1 - 100;
+				System.out.println("Marker 4");
+
+				if(status2 < 0){ //case where a packet is missing in the window
+					status2 = (status2+10)*-1; //converts the negative number to the index of the missing packet in the window
+					stillNeed = status2;
+					sendNACK(colorNeed, stillNeed);
+					System.out.println("Marker 4a");
+					continue;
+				}
+				else if((status2 >= 0) && (status2 <= 9)){ //this implies the last packet is contained within the window
 					try
-					{
-						String temp1 = "new-"+fileName; /*Get Rid of new- *************************************************************************Get Rid of new- ******/
+					{		System.out.println("Marker 4b");
+
+						byte [] data = window[0].toSend;
+						int dataLength = PacketHelp.getLength(data);
+						byte[] temp = PacketHelp.getPayLoad(data, dataLength);
+						fileName = new String(temp);
+						String temp1 = "new-"+fileName;
 						byte [] tempy = temp1.getBytes();
 						String blah = new String(tempy);
 						System.out.println(blah);
 						file = new File(blah);
 						file.createNewFile();
 						System.out.println("File created...");
+						fileOutputStream = new FileOutputStream(file, true); 
+						senderIP = PacketHelp.getIP(data);
+						InetAddress addr = InetAddress.getByName(senderIP);
+						socket.connect(addr, 3001);
+						window[0] = null;
+						stillNeed++;		
+						System.out.println("Marker 4c");
 					}catch(Exception e)
 					{
 						System.err.println(e);
 					}
-					
-					/*Creates the file with the given name. I tested it on our Test class and it creates the file.*/
-				}
-			}
-			else
-			{
-				
-				fileBytes = Arrays.copyOfRange(temp, 0, temp.length);
-				System.out.println("fileBytes.length after Copying: " + fileBytes.length);
-				System.out.println("Temp.length after Copying: " + temp.length);
-
-				try
-				{ 
-				    fileOutputStream = new FileOutputStream(file); 
-				    fileOutputStream.write(fileBytes);
-				    System.out.println("Wrote into file. File size is: " + file.length());
-				    
-				}catch(Exception e)
-				{
-					System.err.println("Something went wrong when we tried to get the fileOutPutStream...");
-				}
-				finally 
-				{
+					writeToFile(1, status2, file);
+					stillNeed = window[status2].seq+1;
+					if(stillNeed>max){
+						stillNeed = 0;
+						if(colorNeed == 'r'){
+							 colorNeed= 'b';
+						}
+						else{
+							colorNeed = 'r';
+						}
+							
+					}
+					for(int i=1; i<status2+1; i++){
+						window[i] = null;
+					}
 					fileOutputStream.close();
+					sendNACK(colorNeed, stillNeed);
+					terminate = true;
 				}
+				else{ //implies window is full, but no last packet within
+					try
+					{
+						System.out.println("Marker 5");
+
+						byte [] data = window[0].toSend;
+						int dataLength = PacketHelp.getLength(data);
+						byte[] temp = PacketHelp.getPayLoad(data, dataLength);
+						fileName = new String(temp);
+						String temp1 = "new-"+fileName;
+						byte [] tempy = temp1.getBytes();
+						String blah = new String(tempy);
+						System.out.println(blah);
+						file = new File(blah);
+						file.createNewFile();
+						System.out.println("File created...");
+						fileOutputStream = new FileOutputStream(file, true); 
+						senderIP = PacketHelp.getIP(data);
+						InetAddress addr = InetAddress.getByName(senderIP);
+						socket.connect(addr, 3001);
+						window[0] = null;
+						stillNeed++;
+					}catch(Exception e)
+					{
+						System.err.println(e);
+					}
+					writeToFile(1, 9, file);
+					stillNeed = window[9].seq+1;
+					if(stillNeed>max){
+						stillNeed = 0;
+						if(colorNeed == 'r'){
+							 colorNeed= 'b';
+						}
+						else{
+							colorNeed = 'r';
+						}
+							
+					}
+					for(int i=1; i<10; i++){
+						window[i] = null;
+					}
+					sendNACK(colorNeed, stillNeed);
+				}
+				
+			}
+			else {
+				System.out.println("Marker 6");
+
+				if(status1 < 0){ //no first packet within window, and we're missing a packet in the window
+					status2 = (status1+10)*(-1);
+					stillNeed = status2;
+					sendNACK(colorNeed, status2);
+					continue;
+				}
+				else if((status1 >= 0) && (status1 <= 9) ){//last packet is within window
+					System.out.println("Marker 6a");
+					status2 = status1; 
+					writeToFile(0, status2, file);
+					stillNeed = window[status2].seq+1;
+					if(stillNeed>max){
+						stillNeed = 0;
+						if(colorNeed == 'r'){
+							 colorNeed= 'b';
+						}
+						else{
+							colorNeed = 'r';
+						}
+							
+					}
+					for(int i=0; i<status2+1; i++){
+						window[i] = null;
+					}
+					sendNACK(colorNeed, stillNeed);
+					fileOutputStream.close();
+					terminate = true;
+				}
+				else{ //no beginning packet, no end packet, everything is filled, general case
+					status2 = 9;
+					System.out.println("Marker 6b");
+
+					writeToFile(0, status2, file);
+					stillNeed = window[status2].seq+1;
+					if(stillNeed>max){
+						stillNeed = 0;
+						if(colorNeed == 'r'){
+							 colorNeed= 'b';
+						}
+						else{
+							colorNeed = 'r';
+						}
+							
+					}
+					for(int i=0; i<status2+1; i++){
+						window[i] = null;
+					}
+					sendNACK(colorNeed, stillNeed);
+					
+				}
+				
 			}
 		}
+
+	}
+	public static void writeToFile(int start, int end, File file) throws IOException{
+		byte [] temp;
+
+		for(int i = start; i < end+1; i++){
+			
+			temp = PacketHelp.getPayLoad(window[i].toSend, window[i].toSend.length);
+			
+			
+			try
+			{ 
+			    
+			    fileOutputStream.write(temp);
+			    //System.out.println("Wrote into file. File size is: " + file.length());
+			    
+			    
+			}catch(Exception e)
+			{
+				e.printStackTrace();
+				System.err.println("Something went wrong when we tried to get the fileOutPutStream...");
+			}
+
+			
+			
+			
+			
+			
+		}
+		//System.out.println("fileBytes.length after Copying: " + fileBytes.length);
+		//System.out.println("Temp.length after Copying: " + temp.length);
+		
 	}
 	public static int checkStatus(PacketInfo [] window){
 		int i;
@@ -187,9 +310,33 @@ public class Receiver implements Runnable
 	 * returns 10 if it is full (standard case)
 	 * returns an index (0-9) if an end of file was found
 	 * all ranges given are inclusive
-	 * adds an extra 100 to return value if there is a beginning of file contained in the window
+	 * adds an extra 100 to return value if there is a beginning packet contained in the window
 	 * unless the window is incomplete
 	 */
+	public static boolean placingPacket(DatagramPacket packet)
+	{
+		byte [] data = packet.getData();
+		int length = PacketHelp.getLength(data);
+		PacketInfo p = new PacketInfo(Arrays.copyOfRange(data, 0, length));
+		
+		for(int i = 0; i < window.length; i++)
+		{
+			if(window[i] == null)
+			{
+				if((p.seq % 10) == i)
+				{
+					window[i] = p;
+					return true;
+				}
+			}
+			else if(window[i].equals(p))
+			{
+				return false;
+			}
+		}
+		return false;
+	}
+	
 	@Override
 	public void run()
 	{

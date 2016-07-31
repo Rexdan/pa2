@@ -2,7 +2,6 @@ import	java.io.*;
 import	java.net.*;
 import java.nio.file.*;
 import java.util.Arrays;
-import java.util.HashMap;
 
 public class Sender implements Runnable{
 	
@@ -17,7 +16,13 @@ public class Sender implements Runnable{
 	static File file;
 	
 	static byte [] toSend;
+	
+	private static DatagramSocket socket;
 
+	public static DatagramSocket getSocket()
+	{
+		return socket;
+	}
 	
 	final private static int MAX = 100;
 	
@@ -35,7 +40,7 @@ public class Sender implements Runnable{
 		//Broadcasting
 		InetAddress		destination = InetAddress.getByName( "255.255.255.255" );
 		DatagramPacket		sendPacket;
-		DatagramSocket		socket = new DatagramSocket();
+		socket = new DatagramSocket();
 		BufferedReader		stdIn = new BufferedReader( new InputStreamReader( System.in ) );
 		int			port = 3001;
 		String s /*= stdIn.readLine()*/;
@@ -46,8 +51,8 @@ public class Sender implements Runnable{
 		byte [] fileBytes;
 		hashArray = new PacketInfo[10];
 		
-		//Nack nThread = new Nack();
-		//nThread.start();
+		Nack nThread = new Nack();
+		nThread.start();
 		//starts nack thread
 		
 		System.out.println( "datagram target is " + destination + " port " + port );
@@ -168,17 +173,19 @@ public class Sender implements Runnable{
 							color = 'r';
 						}
 					}
-					else{
+					else{ 
 						System.out.println("seq: " + seq);
 						seq++;
 					}
 					/*switches color if overflow is about to happen and resets sequence.*/
 					
-					if(seq %10 == 0){
+					/*if(seq %10 == 0){
 						while(!isEmpty()){
-							Thread.sleep(1000);
+							Thread.sleep(100);
 						}
-					}
+					}*/
+
+					System.out.println("AFTER ISEMPTY CHECK");
 					/*
 					 * checks to see if window(hash array) is empty, sleeps for a second if it's not
 					 * in this way, it will only move onto the next window of 10 when all objects have been acknowledged

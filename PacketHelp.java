@@ -159,7 +159,6 @@ public class PacketHelp
 		length[1] = bytes[10];
 		length[2] = bytes[11];
 		length[3] = bytes[12];
-		System.out.println("getLength PROBLEM CHECK: " + bytesToInt(length));
 		return bytesToInt(length);
 	}
 	
