@@ -73,7 +73,7 @@ public class Receiver implements Runnable
 		int stillNeed = 0;
 		char colorNeed  ='r';
 		//System.out.println("Marker 1");
-		socket.setSoTimeout(10000);
+		socket.setSoTimeout(15000);
 		
 		int debug = 0;
 		
@@ -96,11 +96,11 @@ public class Receiver implements Runnable
 					//terminate = true;
 					break;
 				}
-				System.out.println("Attempting to place: " + debug);
-				if(debug == 11)
+				System.out.println("Attempting to place: " + PacketHelp.getSequenceNumber(receivePacket.getData()));
+				/*if(debug == 11)
 				{
 					System.out.println("This is the debug 11 sequence number: " + PacketHelp.getSequenceNumber(receivePacket.getData()));
-				}
+				}*/
 				placingPacket(receivePacket);
 				count++;
 			}

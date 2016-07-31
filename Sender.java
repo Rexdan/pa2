@@ -17,9 +17,13 @@ public class Sender{
 	
 	static byte [] toSend;
 	
-	private static DatagramSocket socket;
+	public static DatagramSocket socket;
 	
 	public static Timer [] timers = new Timer[10];
+	
+	public static InetAddress destination;
+	
+	public static int port;
 
 	public static DatagramSocket getSocket()
 	{
@@ -40,11 +44,14 @@ public class Sender{
 	public static void main(String[] args) throws Exception
 	{
 		//Broadcasting
-		InetAddress		destination = InetAddress.getByName( "255.255.255.255" );
+		/*for(int i=0; i<timers.length; i++){
+			timers[i] = new Timer();
+		}*/
+		destination = InetAddress.getByName( "255.255.255.255" );
 		DatagramPacket		sendPacket;
 		socket = new DatagramSocket();
 		BufferedReader		stdIn = new BufferedReader( new InputStreamReader( System.in ) );
-		int			port = 3001;
+		port = 3001;
 		String s /*= stdIn.readLine()*/;
 		File file = null;
 		FileInputStream fin;
@@ -96,6 +103,7 @@ public class Sender{
 			byte checksum = 0;
 			char color = 'r';
 			boolean terminate = false;
+			int timIndex;
 			while(!terminate)
 			{
 				/*
@@ -122,13 +130,18 @@ public class Sender{
 					toSend = PacketHelp.makePacket(seq, addr, color, checksum , flag, 3001, file.getName().getBytes());
 					System.out.println("After making first packet for name: " + toSend.length);
 					sendPacket = new DatagramPacket( toSend, toSend.length, destination, port );
-					
 					synchronized(hashArray)
 					{
 						hashArray[seq%10] = new PacketInfo(toSend);
 					}
 					
 					socket.send( sendPacket );
+					timIndex = PacketHelp.getSequenceNumber(toSend)%10;
+					synchronized(timers){
+						timers[timIndex] = new Timer();
+						timers[timIndex].schedule(new MyTimerTask(timIndex), 3000);
+					}
+					
 					seq++;
 					System.out.println("seq: " + seq);
 					//from = toSend.length;
@@ -166,6 +179,13 @@ public class Sender{
 					
 					sendPacket = new DatagramPacket( toSend, toSend.length, destination, port );
 					socket.send( sendPacket );
+
+					timIndex = PacketHelp.getSequenceNumber(toSend)%10;
+					synchronized(timers){
+						timers[timIndex] = new Timer();
+						timers[timIndex].schedule(new MyTimerTask(timIndex), 3000);
+					}
+
 					//creates and sends packet
 					
 					synchronized(hashArray){
@@ -188,7 +208,7 @@ public class Sender{
 					}
 					/*switches color if overflow is about to happen and resets sequence.*/
 					System.out.println("seq: " + seq);
-					if(seq %10 == 0){
+					if(seq % 10 == 0){
 						System.out.println("Nap time.");
 						while(!isEmpty()){
 							Thread.sleep(100);
@@ -225,12 +245,6 @@ public class Sender{
 			}
 		}
 		return true;
-	}
-	public static void resend(int i)
-	{
-		timers[i].cancel();
-		timers[i] = new Timer();
-		timers[i].schedule(new Sender(), 3000);
 	}
 	/*checks if window is completely empty*/
 }
