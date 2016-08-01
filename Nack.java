@@ -43,13 +43,9 @@ public class Nack extends Thread{
 							if( PacketHelp.compareData( a , b )  <  0 && checkSum ){
 								//System.out.printf("Packet %d removed.\n", i);
 								synchronized(Sender.timers){
-									try{
 	
 										Sender.timers[PacketHelp.getSequenceNumber(a)%10].cancel();
-									}
-									catch(IllegalStateException e){
-										
-									}
+
 									int seq = PacketHelp.getSequenceNumber(a)%10;
 									Sender.timers[seq].purge();
 									Sender.timers[seq] = new Timer();

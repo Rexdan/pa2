@@ -11,28 +11,32 @@ public class MyTimerTask extends TimerTask{
 	public void run() {
 		// TODO Auto-generated method stub
 		synchronized(Sender.timers){
-			absCancel(Sender.timers[i]);
+			//absCancel(Sender.timers[i]);
+			Sender.timers[i].cancel();
 			Sender.timers[i].purge();
 			Sender.timers[i] = new Timer();
 			synchronized(Sender.hashArray){
 				/*byte [] resend = Sender.hashArray[i].toSend;
 				System.out.println("SEQ for RESEND IN MYTIMERTASK: " + PacketHelp.getSequenceNumber(resend));
 				DatagramPacket dp = new DatagramPacket(resend, resend.length, Sender.destination, Sender.port);*/
-				try {
+
+					if(Sender.hashArray[i] == null) return;
+					
 					byte [] resend = Sender.hashArray[i].toSend;
 					System.out.println("SEQ for RESEND IN MYTIMERTASK: " + PacketHelp.getSequenceNumber(resend));
 					DatagramPacket dp = new DatagramPacket(resend, resend.length, Sender.destination, Sender.port);
-					Sender.socket.send( dp);
-				} catch (Exception e) {
-					//e.printStackTrace();
-					return;
-				}
+					try {
+						Sender.socket.send( dp);
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 			}
 			
 			Sender.timers[i].schedule(new MyTimerTask(i), 3000);
 		}
 	}
-	public boolean absCancel(Timer t){
+	/*public boolean absCancel(Timer t){
 		try{
 			t.cancel();
 			return true;
@@ -40,6 +44,6 @@ public class MyTimerTask extends TimerTask{
 		catch(IllegalStateException e){
 			return false;
 		}
-	}
+	}*/
 		
 }
