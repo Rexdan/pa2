@@ -136,7 +136,19 @@ public class Receiver implements Runnable
 
 				if(status2 < 0){ //case where a packet is missing in the window
 					status2 = (status2+10)*-1; //converts the negative number to the index of the missing packet in the window
-					//stillNeed = status2;
+					if(status2!=0){//General case.
+						stillNeed = PacketHelp.getSequenceNumber(window[status2-1].toSend) + 1;
+						if(stillNeed > max)
+						{
+							stillNeed = 0;
+							if(colorNeed == 'r'){
+								 colorNeed= 'b';
+							}
+							else{
+								colorNeed = 'r';
+							}
+						}
+					}
 					sendNACK(colorNeed, stillNeed);
 					System.out.println("Marker 4a");
 					continue;
@@ -238,7 +250,19 @@ public class Receiver implements Runnable
 
 				if(status2 < 0){ //no first packet within window, and we're missing a packet in the window
 					status2 = (status2+10)*(-1);
-					//stillNeed = status2;
+					if(status2!=0){//General case.
+						stillNeed = PacketHelp.getSequenceNumber(window[status2-1].toSend) + 1;
+						if(stillNeed > max)
+						{
+							stillNeed = 0;
+							if(colorNeed == 'r'){
+								 colorNeed= 'b';
+							}
+							else{
+								colorNeed = 'r';
+							}
+						}
+					}
 					sendNACK(colorNeed, stillNeed);
 					continue;
 				}
