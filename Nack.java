@@ -18,7 +18,6 @@ public class Nack extends Thread{
 			socket.setSoTimeout(15000);
 			while(terminate==false )
 			{
-				//System.out.println("Attempting to receive nack: " + debug);
 				try{
 					socket.receive( receivePacket );
 				}
@@ -26,32 +25,31 @@ public class Nack extends Thread{
 					System.out.println("Receiver Unresponsive");
 					break;
 				}
-				//System.out.println("Nack received.");
 				debug++;
 				byte[] buffer = receivePacket.getData();
 				byte[] b = Arrays.copyOfRange(buffer, 0, PacketHelp.getLength(buffer));
-				
 				boolean checkSum = PacketHelp.checkTheSum(b);
 				
-				synchronized(Sender.hashArray){
-					
+				synchronized(this){
 					for(int i=0; i<Sender.hashArray.length; i++){
-						
 						if(Sender.hashArray[i]!=null ){	
 							byte [] a = Sender.hashArray[i].toSend;
-							//System.out.printf("index %d not null.\n", i);
-							if( PacketHelp.compareData( a , b )  <  0 && checkSum ){
-								//System.out.printf("Packet %d removed.\n", i);
-								synchronized(Sender.timers){
-	
-										Sender.timers[PacketHelp.getSequenceNumber(a)%10].cancel();
-
+							if( PacketHelp.compareData( a , b )  <  0 && checkSum )
+							{
+								//synchronized(Sender.timers)
+								{
+									
 									int seq = PacketHelp.getSequenceNumber(a)%10;
-									Sender.timers[seq].purge();
+									//Sender.timers[PacketHelp.getSequenceNumber(a)%10].cancel();
+									//Sender.timers[seq].purge();
+									
 									Sender.timers[seq] = new Timer();
 									Sender.timers[seq].schedule(new MyTimerTask(seq), 3000);
+									//Runtime.getRuntime().gc();
+									System.gc();
+
 								}
-									Sender.hashArray[i] = null;
+								Sender.hashArray[i] = null;
 							}
 						}
 					}
@@ -59,7 +57,6 @@ public class Nack extends Thread{
 			}
 			return;
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}

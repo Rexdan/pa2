@@ -63,7 +63,7 @@ public class Sender{
 		
 		//starts nack thread
 		
-		System.out.println( "datagram target is " + destination + " port " + port );
+		//System.out.println( "datagram target is " + destination + " port " + port );
 		System.out.print( "Enter File Name: " );
 		socket.setBroadcast( true );
 		
@@ -126,9 +126,9 @@ public class Sender{
 					/*Easily send name of file to Sender first.*/
 					flag=1;
 					//System.out.println("fileGetName: " + file.getName().getBytes() + "size: " + file.getName().getBytes().length);
-					System.out.println("This is the IP address on Sender: " + addr);
+					//System.out.println("This is the IP address on Sender: " + addr);
 					toSend = PacketHelp.makePacket(seq, addr, color, checksum , flag, 3001, file.getName().getBytes());
-					System.out.println("After making first packet for name: " + toSend.length);
+					//System.out.println("After making first packet for name: " + toSend.length);
 					sendPacket = new DatagramPacket( toSend, toSend.length, destination, port );
 					synchronized(hashArray)
 					{
@@ -143,7 +143,7 @@ public class Sender{
 					}
 					
 					seq++;
-					System.out.println("seq: " + seq);
+					//System.out.println("seq: " + seq);
 					//from = toSend.length;
 					//to = toSend.length + 2047;
 				}
@@ -207,13 +207,13 @@ public class Sender{
 						seq++;
 					}
 					/*switches color if overflow is about to happen and resets sequence.*/
-					System.out.println("seq: " + seq);
+					//System.out.println("seq: " + seq);
 					if(seq % 10 == 0){
-						System.out.println("Nap time.");
+						//System.out.println("Nap time.");
 						while(!isEmpty()){
-							Thread.sleep(100);
+							//Thread.sleep(100);
 						}
-						System.out.println("WAKE UP.");
+						//System.out.println("WAKE UP.");
 					}
 
 					//System.out.println("AFTER ISEMPTY CHECK");
