@@ -1,3 +1,5 @@
+import java.util.Random;
+
 public class PacketHelp
 {
 	/*
@@ -281,9 +283,10 @@ public class PacketHelp
 			return -2;
 		}
 	}
-	//compares packetData: 
-	//returns -1 if the first PacketData comes before
-	//returns 1 if the first  PacketData comes After
-	//returns 0 if they are the same packetData labeling
-	//returns -2 if there is an error
+	/*compares packetData: 
+	* returns -1 if the first PacketData comes before
+	* returns 1 if the first  PacketData comes After
+	* returns 0 if they are the same packetData labeling
+	* returns -2 if there is an error
+	*/
 }

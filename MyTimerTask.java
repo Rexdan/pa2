@@ -1,3 +1,4 @@
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.util.Timer;
@@ -5,18 +6,22 @@ import java.util.TimerTask;
 import java.lang.Runtime;
 
 public class MyTimerTask extends TimerTask{
-	int i;
+	public int i;
+	public volatile boolean terminate = false;
 	public MyTimerTask(int i){
 		this.i = i;
 	}
 	public void run() {
-		synchronized(this){
-			/*Sender.timers[i].cancel();*/
-			/*Sender.timers[i].purge();*/
-			Sender.timers[i] = new Timer();
+		while(!terminate)
+		{
+			synchronized(this){
+			//Sender.timers[i].cancel();
+			
+			//System.gc();
+			//Sender.timers[i] = new Timer();
 
 			//synchronized(Sender.hashArray)
-			{
+			//{
 					if(Sender.hashArray[i] == null) return;
 					
 					byte [] resend = Sender.hashArray[i].toSend;
@@ -27,12 +32,25 @@ public class MyTimerTask extends TimerTask{
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
-			}
+			//}
 			
-			Sender.timers[i].schedule(new MyTimerTask(i), 500);
+			//Sender.timers[i].schedule(new MyTimerTask(i), 500);
+			shutdown();
 			//Runtime.getRuntime().gc();
-			System.gc();
 
+			}
+		}	
+	}
+	public void shutdown()
+	{
+		terminate = true;
+		//Sender.timers[i] = new Timer();
+		synchronized(Sender.tasks[i]){
+			this.cancel();
+			Sender.timers[i].purge();
+			MyTimerTask mtt = new MyTimerTask(i);
+			Sender.tasks[i] = mtt;
+			Sender.timers[i].schedule(mtt, 500);
 		}
-	}	
+	}
 }

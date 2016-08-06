@@ -1,3 +1,4 @@
+
 import	java.io.*;
 import	java.net.*;
 import java.nio.file.*;
@@ -10,74 +11,87 @@ public class Sender{
 	
 	//needs nack and timeout thread implementation to work!!!
 	//do we have to deal with multiple dynamically changing receivers?
-	
 	int size;
-	
-	static File file;
-	
-	static byte [] toSend;
-	
+	public static byte [] toSend;
 	public static DatagramSocket socket;
-	
 	public static Timer [] timers = new Timer[10];
-	
+	public static MyTimerTask [] tasks = new MyTimerTask[10];
 	public static InetAddress destination;
-	
 	public static int port;
-
+	public static int nackPort = 3002;
+	public static PacketInfo [] hashArray;
+	
 	public static DatagramSocket getSocket()
 	{
 		return socket;
 	}
-	
-	final private static int MAX = 100;
-	
-	public static PacketInfo [] hashArray;
-	
-	private void ping()
-	{
-		/*
-		 * Somehow ask Receiver if they received the packet.
-		 */
-	}
 
 	public static void main(String[] args) throws Exception
 	{
-		//Broadcasting
-		/*for(int i=0; i<timers.length; i++){
-			timers[i] = new Timer();
-		}*/
+		if(args.length < 1)
+		{
+			System.err.println("Program exited. You must enter a port number.");
+			System.exit(1);
+		}
+		else
+		{
+			try
+			{
+				port = Integer.parseInt(args[0]);
+				if(port == 3002)
+				{
+					System.out.println("Cannot use port number 3002. Please restart the program with another port number.");
+				}
+			}catch(NumberFormatException e)
+			{
+				System.err.println("Program exited. Please enter an integer as the port number.");
+				System.exit(1);
+			}
+		}
+
 		destination = InetAddress.getByName( "255.255.255.255" );
-		DatagramPacket		sendPacket;
+		DatagramPacket sendPacket;
 		socket = new DatagramSocket();
-		BufferedReader		stdIn = new BufferedReader( new InputStreamReader( System.in ) );
-		port = 3001;
-		String s /*= stdIn.readLine()*/;
+		BufferedReader stdIn = new BufferedReader( new InputStreamReader( System.in ) );
+		//port = 3001;
+		String s;
 		File file = null;
-		FileInputStream fin;
-		FileOutputStream fos;
-		InputStream stream;
 		byte [] fileBytes;
 		hashArray = new PacketInfo[10];
-		
-		
-		//starts nack thread
-		
 		//System.out.println( "datagram target is " + destination + " port " + port );
 		System.out.print( "Enter File Name: " );
 		socket.setBroadcast( true );
 		
 		Nack nThread = new Nack();
-		nThread.start();
+		boolean hasStarted = false;
 		
 		InetAddress ip = InetAddress.getLocalHost();
 		String addr = ip.getHostAddress();
 		
+		for(int i=0; i<timers.length; i++){
+			timers[i] = new Timer();
+		}
+		for(int i=0; i<tasks.length; i++){
+			tasks[i] = new MyTimerTask(i);
+		}
+		
 		while ( (s = stdIn.readLine()) != null )
 		{
+			if(!hasStarted)
+			{
+				nThread.start();
+				hasStarted = true;
+			}
 			try
 			{
-				file = new File(s);
+				String OS = System.getProperty("os.name").toLowerCase();
+				String temp = s;
+				
+				if((OS.indexOf("mac") >= 0) || (OS.indexOf("nix") >= 0) || (OS.indexOf("nux") >= 0) || (OS.indexOf("aix") > 0))
+				{
+					temp = System.getProperty("user.dir").toString() + "/" + s;
+				}
+				file = new File(temp);
 			}catch(Exception e)
 			{
 				System.err.println("File not found." + "\n" + "Please enter a proper file name.");
@@ -104,8 +118,15 @@ public class Sender{
 			char color = 'r';
 			boolean terminate = false;
 			int timIndex;
+			/*for(int i=0; i<timers.length; i++){
+				timers[i] = new Timer();
+			}
+			for(int i=0; i<tasks.length; i++){
+				tasks[i] = new MyTimerTask(i);
+			}*/
 			while(!terminate)
 			{
+				System.out.println("Sending...");
 				/*
 				 * The packet we are sending.
 				 * 
@@ -127,21 +148,24 @@ public class Sender{
 					flag=1;
 					//System.out.println("fileGetName: " + file.getName().getBytes() + "size: " + file.getName().getBytes().length);
 					//System.out.println("This is the IP address on Sender: " + addr);
-					toSend = PacketHelp.makePacket(seq, addr, color, checksum , flag, 3001, file.getName().getBytes());
+					toSend = PacketHelp.makePacket(seq, addr, color, checksum , flag, nackPort, file.getName().getBytes());
 					//System.out.println("After making first packet for name: " + toSend.length);
 					sendPacket = new DatagramPacket( toSend, toSend.length, destination, port );
 					synchronized(hashArray)
 					{
 						hashArray[seq%10] = new PacketInfo(toSend);
 					}
-					
+					System.out.println("Send sequence: " + seq);
 					socket.send( sendPacket );
 					timIndex = PacketHelp.getSequenceNumber(toSend)%10;
-					synchronized(timers){
-						timers[timIndex] = new Timer();
-						timers[timIndex].schedule(new MyTimerTask(timIndex), 3000);
+					//timers[timIndex] = new Timer();
+					synchronized(Sender.tasks){
+						Sender.tasks[timIndex].cancel();
+						Sender.timers[timIndex].purge();
+						MyTimerTask mtt = new MyTimerTask(timIndex);
+						Sender.tasks[timIndex] = mtt;
+						Sender.timers[timIndex].schedule(mtt, 500);
 					}
-					
 					seq++;
 					//System.out.println("seq: " + seq);
 					//from = toSend.length;
@@ -149,8 +173,6 @@ public class Sender{
 				}
 				else
 				{
-					
-					
 					/*If the to index becomes greater than last index--we are at EOF*/
 					int whatever = to + 1024;
 					if(whatever >= (fileBytes.length - 1)){
@@ -173,26 +195,31 @@ public class Sender{
 					//System.out.printf("From: %d To: %d \n", from, to);
 					byte[] info =  Arrays.copyOfRange(fileBytes, from, to + 1);
 					//System.out.println("from: " + from +"\n"+"to: " + to);
-					toSend = PacketHelp.makePacket(seq, addr, color, checksum , flag, 3001, info);
-					
-					//System.out.println("toSend Length: " + toSend.length);
-					
-					sendPacket = new DatagramPacket( toSend, toSend.length, destination, port );
-					socket.send( sendPacket );
-
-					timIndex = PacketHelp.getSequenceNumber(toSend)%10;
-					synchronized(timers){
-						timers[timIndex] = new Timer();
-						timers[timIndex].schedule(new MyTimerTask(timIndex), 3000);
-					}
-
-					//creates and sends packet
-					
+					/*
+					 * Must use the nackPort variable for nacking.
+					 */
+					toSend = PacketHelp.makePacket(seq, addr, color, checksum , flag, nackPort, info);
 					synchronized(hashArray){
 						hashArray[seq%10] = new PacketInfo(toSend);
 					}
 					//puts the packetinfo into hash array
+					System.out.println("Send sequence: " + seq);
+					/*
+					 * Must use port number that both receiver and sender are on for the DatagramPacket.
+					 */
+					sendPacket = new DatagramPacket( toSend, toSend.length, destination, port );
+					socket.send( sendPacket );
+
+					timIndex = PacketHelp.getSequenceNumber(toSend)%10;
+					//timers[timIndex] = new Timer();
 					
+					synchronized(Sender.tasks[timIndex]){
+						Sender.tasks[timIndex].cancel();
+						Sender.timers[timIndex].purge();
+						MyTimerTask mtt = new MyTimerTask(timIndex);
+						Sender.tasks[timIndex] = mtt;
+						Sender.timers[timIndex].schedule(mtt, 500);
+					}
 					if(seq == max){
 						seq = 0;
 						if(color == 'r'){
@@ -209,11 +236,11 @@ public class Sender{
 					/*switches color if overflow is about to happen and resets sequence.*/
 					//System.out.println("seq: " + seq);
 					if(seq % 10 == 0){
-						//System.out.println("Nap time.");
+						System.out.println("Nap time.");
 						while(!isEmpty()){
 							//Thread.sleep(100);
 						}
-						//System.out.println("WAKE UP.");
+						System.out.println("WAKE UP.");
 					}
 
 					//System.out.println("AFTER ISEMPTY CHECK");
@@ -230,10 +257,17 @@ public class Sender{
 					 */
 				}
 			}
-			//System.out.println( "Enter a File Name: " );
+			
+			/*for(int i=0; i<timers.length; i++){
+				timers[i].cancel();
+			}*/
+			System.out.println("File successfully transfered.");
+			System.out.print( "Enter a File Name: " );
 		}
 		/*what is good termination condition for file query loop?*/
-		
+		for(int i=0; i<timers.length; i++){
+			timers[i].cancel();
+		}
 		nThread.terminate = true;
 	}
 	private static boolean isEmpty(){
